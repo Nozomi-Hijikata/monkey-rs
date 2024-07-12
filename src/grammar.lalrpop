@@ -7,6 +7,7 @@ grammar;
 pub Stmt: Stmt = {
   LetStmt,
   ReturnStmt,
+  ExprStmt,
 };
 
 LetStmt: Stmt = {
@@ -15,6 +16,10 @@ LetStmt: Stmt = {
 
 ReturnStmt: Stmt = {
     "return" <Expr> ";" => Stmt::ReturnStmt(<>),
+};
+
+ExprStmt: Stmt = {
+    <Expr> ";" => Stmt::ExprStmt(<>),
 };
 
 // non-terminals(Expression)
@@ -33,11 +38,11 @@ Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
-    "(" <Expr> ")",
     PrefixOp Term => Box::new(Expr::PrefixOp(<>)),
+    "(" <Expr> ")",
 };
 
-// precedence
+// precedence of terminals
 match {
     "true",
     "false",

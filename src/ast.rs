@@ -3,10 +3,8 @@ use std::fmt::{Debug, Error, Formatter};
 pub enum Stmt {
     LetStmt(Box<Expr>, Box<Expr>),
     ReturnStmt(Box<Expr>),
-    // ExprStmt(Expr),
+    ExprStmt(Box<Expr>),
     // TODO:
-    // Return Statement
-    // Expression Statement
     // Block Statement
 }
 
@@ -42,6 +40,7 @@ impl Debug for Stmt {
         match *self {
             LetStmt(ref s, ref e) => write!(fmt, "let {:?} = {:?}", s, e),
             ReturnStmt(ref e) => write!(fmt, "return {:?}", e),
+            ExprStmt(ref e) => write!(fmt, "{:?}", e),
         }
     }
 }
