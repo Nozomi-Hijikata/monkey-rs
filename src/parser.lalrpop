@@ -7,27 +7,47 @@ grammar;
 
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
-  Expr ExprOp Factor => Box::new(Expr::Op(<>)),
+  Expr ExprOp Factor => Box::new(Expr::InfixOp(<>)),
   Factor,
 };
 
 
 Factor: Box<Expr> = {
-    Factor FactorOp Term => Box::new(Expr::Op(<>)),
+    Factor FactorOp Term => Box::new(Expr::InfixOp(<>)),
     Term,
 };
 
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
+    Identifier => Box::new(Expr::Identifier(<>)),
+    Bool => Box::new(Expr::Boolean(<>)),
     "(" <Expr> ")",
     PrefixOp Term => Box::new(Expr::PrefixOp(<>)),
 };
 
+// precedence
+match {
+    "true",
+    "false",
+} else {
+    r"[a-zA-Z_][a-zA-Z0-9_]*",
+    _
+}
 
 // terminals
 Num: i32 = {
     r"[0-9]+" => i32::from_str(<>).unwrap()
 };
+
+Identifier: String = {
+    r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string()
+};
+
+Bool: bool = {
+    "true" => true,
+    "false" => false
+};
+
 
 ExprOp: Opcode = {
     "+" => Opcode::Add,
@@ -44,3 +64,4 @@ PrefixOp: Opcode = {
     "-" => Opcode::Sub,
     "!" => Opcode::Bang,
 };
+

@@ -1,10 +1,22 @@
 use std::fmt::{Debug, Error, Formatter};
 pub enum Expr {
     Number(i32),
-    Op(Box<Expr>, Opcode, Box<Expr>),
+    Identifier(String),
+    Boolean(bool),
+    InfixOp(Box<Expr>, Opcode, Box<Expr>),
     PrefixOp(Opcode, Box<Expr>),
-    // TODO: ifexpr, Idenfier, Boolean, Function literal, Call expression, String Literal, Array
-    // Literal, Hash Literal, Index Expression, Hash Index Expression
+    // TODO:
+    // IfExpression
+    // Function Literal
+    // Statement
+    // Block Statement
+    // Expression Statement
+    // Call expression
+    // String literal
+    // Array Literal
+    // Hash literal
+    // Index Expression
+    // Hash Index Expression
 }
 
 #[derive(Copy, Clone)]
@@ -21,7 +33,9 @@ impl Debug for Expr {
         use self::Expr::*;
         match *self {
             Number(n) => write!(fmt, "{:?}", n),
-            Op(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
+            Identifier(ref s) => write!(fmt, "{}", s),
+            Boolean(b) => write!(fmt, "{:?}", b),
+            InfixOp(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
             PrefixOp(op, ref e) => write!(fmt, "({:?}{:?})", op, e),
         }
     }
