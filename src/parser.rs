@@ -88,3 +88,36 @@ fn test_prefix_expr() {
     let expr = grammar::ExprParser::new().parse("1 + !2").unwrap();
     assert_eq!(format!("{:?}", expr), "(1 + (!2))");
 }
+
+#[test]
+fn test_let_stmt() {
+    let stmt = grammar::StmtParser::new().parse("let a = 1;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = 1");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 + 2;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = (1 + 2)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 + 2 * 3;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = (1 + (2 * 3))");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 * 2 + 3;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = ((1 * 2) + 3)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 + 2 + 3;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = ((1 + 2) + 3)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 * 2 * 3;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = ((1 * 2) * 3)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 + 2 * 3 + 4;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = ((1 + (2 * 3)) + 4)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 * 2 + 3 * 4;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = ((1 * 2) + (3 * 4))");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 + 2 + 3 + 4;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = (((1 + 2) + 3) + 4)");
+
+    let stmt = grammar::StmtParser::new().parse("let a = 1 * 2 * 3 * 4;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "let a = (((1 * 2) * 3) * 4)");
+}

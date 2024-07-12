@@ -1,4 +1,15 @@
 use std::fmt::{Debug, Error, Formatter};
+
+pub enum Stmt {
+    LetStmt(Box<Expr>, Box<Expr>),
+    // ReturnStmt(Expr),
+    // ExprStmt(Expr),
+    // TODO:
+    // Return Statement
+    // Expression Statement
+    // Block Statement
+}
+
 pub enum Expr {
     Number(i32),
     Identifier(String),
@@ -8,14 +19,11 @@ pub enum Expr {
     // TODO:
     // IfExpression
     // Function Literal
-    // Statement
-    // Block Statement
-    // Expression Statement
     // Call expression
     // String literal
     // Array Literal
+    // Array Index Expression
     // Hash literal
-    // Index Expression
     // Hash Index Expression
 }
 
@@ -26,6 +34,15 @@ pub enum Opcode {
     Add,
     Sub,
     Bang,
+}
+
+impl Debug for Stmt {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        use self::Stmt::*;
+        match *self {
+            LetStmt(ref s, ref e) => write!(fmt, "let {:?} = {:?}", s, e),
+        }
+    }
 }
 
 impl Debug for Expr {

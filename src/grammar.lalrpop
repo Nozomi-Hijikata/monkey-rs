@@ -1,9 +1,16 @@
 use std::str::FromStr;
-use crate::ast::{Expr, Opcode};
+use crate::ast::{Stmt, Expr, Opcode};
 
 grammar;
 
 // non-terminals(Statements)
+pub Stmt: Stmt = {
+  LetStmt
+};
+
+LetStmt: Stmt = {
+    "let" <Term> "=" <Expr> ";" => Stmt::LetStmt(<>),
+};
 
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
@@ -29,6 +36,7 @@ Term: Box<Expr> = {
 match {
     "true",
     "false",
+    "let",
 } else {
     r"[a-zA-Z_][a-zA-Z0-9_]*",
     _
