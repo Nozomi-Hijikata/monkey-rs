@@ -1,5 +1,5 @@
 mod ast;
-mod eval;
+mod parser;
 
 fn main() {
     println!("Hello, world!");
