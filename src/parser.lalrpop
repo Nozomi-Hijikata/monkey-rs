@@ -1,0 +1,46 @@
+use std::str::FromStr;
+use crate::ast::{Expr, Opcode};
+
+grammar;
+
+// non-terminals(Statements)
+
+// non-terminals(Expression)
+pub Expr: Box<Expr> = {
+  Expr ExprOp Factor => Box::new(Expr::Op(<>)),
+  Factor,
+};
+
+
+Factor: Box<Expr> = {
+    Factor FactorOp Term => Box::new(Expr::Op(<>)),
+    Term,
+};
+
+Term: Box<Expr> = {
+    Num => Box::new(Expr::Number(<>)),
+    "(" <Expr> ")",
+    PrefixOp Term => Box::new(Expr::PrefixOp(<>)),
+};
+
+
+// terminals
+Num: i32 = {
+    r"[0-9]+" => i32::from_str(<>).unwrap()
+};
+
+ExprOp: Opcode = {
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+};
+
+FactorOp: Opcode = {
+    "*" => Opcode::Mul,
+    "/" => Opcode::Div,
+};
+
+PrefixOp: Opcode = {
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+    "!" => Opcode::Bang,
+};
