@@ -5,11 +5,16 @@ grammar;
 
 // non-terminals(Statements)
 pub Stmt: Stmt = {
-  LetStmt
+  LetStmt,
+  ReturnStmt,
 };
 
 LetStmt: Stmt = {
     "let" <Term> "=" <Expr> ";" => Stmt::LetStmt(<>),
+};
+
+ReturnStmt: Stmt = {
+    "return" <Expr> ";" => Stmt::ReturnStmt(<>),
 };
 
 // non-terminals(Expression)
@@ -37,6 +42,7 @@ match {
     "true",
     "false",
     "let",
+    "return"
 } else {
     r"[a-zA-Z_][a-zA-Z0-9_]*",
     _

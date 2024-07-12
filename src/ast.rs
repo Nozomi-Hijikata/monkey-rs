@@ -2,7 +2,7 @@ use std::fmt::{Debug, Error, Formatter};
 
 pub enum Stmt {
     LetStmt(Box<Expr>, Box<Expr>),
-    // ReturnStmt(Expr),
+    ReturnStmt(Box<Expr>),
     // ExprStmt(Expr),
     // TODO:
     // Return Statement
@@ -41,6 +41,7 @@ impl Debug for Stmt {
         use self::Stmt::*;
         match *self {
             LetStmt(ref s, ref e) => write!(fmt, "let {:?} = {:?}", s, e),
+            ReturnStmt(ref e) => write!(fmt, "return {:?}", e),
         }
     }
 }
