@@ -42,6 +42,10 @@ pub enum Opcode {
     Add,
     Sub,
     Bang,
+    Eq,
+    NotEq,
+    Lt,
+    Gt,
 }
 
 impl Debug for Stmt {
@@ -107,6 +111,10 @@ impl Debug for Opcode {
             Add => write!(fmt, "+"),
             Sub => write!(fmt, "-"),
             Bang => write!(fmt, "!"),
+            Eq => write!(fmt, "=="),
+            NotEq => write!(fmt, "!="),
+            Lt => write!(fmt, "<"),
+            Gt => write!(fmt, ">"),
         }
     }
 }

@@ -60,6 +60,18 @@ fn test_infix_expr() {
 
     let expr = grammar::ExprParser::new().parse("1 * 2 * 3 * 4").unwrap();
     assert_eq!(format!("{:?}", expr), "(((1 * 2) * 3) * 4)");
+
+    let expr = grammar::ExprParser::new().parse("1 < 2").unwrap();
+    assert_eq!(format!("{:?}", expr), "(1 < 2)");
+
+    let expr = grammar::ExprParser::new().parse("1 > 2").unwrap();
+    assert_eq!(format!("{:?}", expr), "(1 > 2)");
+
+    let expr = grammar::ExprParser::new().parse("1 == 2").unwrap();
+    assert_eq!(format!("{:?}", expr), "(1 == 2)");
+
+    let expr = grammar::ExprParser::new().parse("1 != 2").unwrap();
+    assert_eq!(format!("{:?}", expr), "(1 != 2)");
 }
 
 #[test]
@@ -138,6 +150,12 @@ fn test_operator_precedence() {
         .parse("a + b * c + d / e - f")
         .unwrap();
     assert_eq!(format!("{:?}", expr), "(((a + (b * c)) + (d / e)) - f)");
+
+    let expr = grammar::ExprParser::new().parse("5 > 4 == 3 < 4").unwrap();
+    assert_eq!(format!("{:?}", expr), "((5 > 4) == (3 < 4))");
+
+    let expr = grammar::ExprParser::new().parse("5 < 4 != 3 > 4").unwrap();
+    assert_eq!(format!("{:?}", expr), "((5 < 4) != (3 > 4))");
 }
 
 #[test]

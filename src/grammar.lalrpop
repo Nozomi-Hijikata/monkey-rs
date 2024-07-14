@@ -38,11 +38,16 @@ BlockStmt: Stmt = {
 pub Expr: Box<Expr> = {
   #[precedence(level="0")]
   Term,
-  #[precedence(level="1")] #[assoc(side="left")] // 左結合
-  <left:Expr> <operator:FactorOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="2")] #[assoc(side="left")]
-  <left:Expr> <operator:ExprOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="3")]
+  // 同じ優先度の場合は左結合
+  #[precedence(level="1")] #[assoc(side="left")] // 1: 乗算除算
+  <left:Expr> <operator:ProductOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
+  #[precedence(level="2")] #[assoc(side="left")] // 2: 加算減算
+  <left:Expr> <operator:SumOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
+  #[precedence(level="3")] #[assoc(side="left")] // 3: 比較演算子
+  <left:Expr> <operator:LessGreaterOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
+  #[precedence(level="4")] #[assoc(side="left")] // 4: 等価演算子
+  <left:Expr> <operator:EqualsOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
+  #[precedence(level="5")]
   IfExpr,
 };
 
@@ -53,15 +58,11 @@ IfExpr: Box<Expr> = {
       =>Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: None }),
 };
 
-PrefixExpr: Box<Expr> = {
-    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
-};
-
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
-    PrefixExpr,
+    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
     "(" <Expr> ")",
 };
 
@@ -92,13 +93,12 @@ Bool: bool = {
     "false" => false
 };
 
-
-ExprOp: Opcode = {
+SumOp: Opcode = {
     "+" => Opcode::Add,
     "-" => Opcode::Sub,
 };
 
-FactorOp: Opcode = {
+ProductOp: Opcode = {
     "*" => Opcode::Mul,
     "/" => Opcode::Div,
 };
@@ -109,3 +109,12 @@ PrefixOp: Opcode = {
     "!" => Opcode::Bang,
 };
 
+EqualsOp: Opcode = {
+    "==" => Opcode::Eq,
+    "!=" => Opcode::NotEq,
+};
+
+LessGreaterOp: Opcode = {
+    "<" => Opcode::Lt,
+    ">" => Opcode::Gt,
+};
