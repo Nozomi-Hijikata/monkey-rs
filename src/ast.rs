@@ -25,8 +25,11 @@ pub enum Expr {
         consequence: Stmt,
         alternative: Option<Stmt>,
     },
+    FuncLit {
+        parameters: Vec<String>,
+        body: Stmt,
+    },
     // TODO:
-    // Function Literal
     // Call expression
     // String literal
     // Array Literal
@@ -96,6 +99,22 @@ impl Debug for Expr {
                 if let Some(ref alt) = *alternative {
                     s.push_str(&format!(" else {:?}", alt));
                 }
+                write!(fmt, "{}", s)
+            }
+            FuncLit {
+                ref parameters,
+                ref body,
+            } => {
+                let mut s = String::new();
+                s.push_str("fn(");
+                for (i, p) in parameters.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(p);
+                }
+                s.push_str(") ");
+                s.push_str(&format!("{:?}", body));
                 write!(fmt, "{}", s)
             }
         }
