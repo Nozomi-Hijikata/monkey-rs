@@ -20,12 +20,10 @@ LetStmt: Stmt = {
     "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::LetStmt{<>},
 };
 
-// TODO: セミコロンを除外してもparseできるようにする
 ReturnStmt: Stmt = {
     "return" <return_value:Expr> ";" => Stmt::ReturnStmt{ <> },
 };
 
-// TODO: セミコロンを除外してもparseできるようにする
 ExprStmt: Stmt = {
     <expression:Expr> ";" => Stmt::ExprStmt{ <> },
 };
