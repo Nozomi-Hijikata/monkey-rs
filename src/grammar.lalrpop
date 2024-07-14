@@ -4,11 +4,11 @@ use crate::ast::{Stmt, Expr, Opcode};
 grammar;
 
 // non-terminals(Statements)
-Stmts: Vec<Stmt> = {
-    (Stmt)* => <>.into_iter().collect(),
+Stmts: Vec<Box<Stmt>> = {
+    <v:(<Stmt>)*> => v
 };
 
-pub Stmt: Stmt = {
+pub Stmt: Box<Stmt> = {
   LetStmt,
   ReturnStmt,
   ExprStmt,
@@ -16,20 +16,20 @@ pub Stmt: Stmt = {
 };
 
 
-LetStmt: Stmt = {
-    "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::Let{<>},
+LetStmt: Box<Stmt> = {
+    "let" <name:Identifier> "=" <value:Expr> ";" => Box::new(Stmt::Let{<>}),
 };
 
-ReturnStmt: Stmt = {
-    "return" <return_value:Expr> ";" => Stmt::Return{ <> },
+ReturnStmt: Box<Stmt> = {
+    "return" <return_value:Expr> ";" => Box::new(Stmt::Return{ <> }),
 };
 
-ExprStmt: Stmt = {
-    <expression:Expr> ";" => Stmt::Expr{ <> },
+ExprStmt: Box<Stmt> = {
+    <expression:Expr> ";" => Box::new(Stmt::Expr{ <> }),
 };
 
-BlockStmt: Stmt = {
-    "{" <statements:Stmts> "}" => Stmt::Block { <> },
+BlockStmt: Box<Stmt> = {
+    "{" <statements:Stmts> "}" => Box::new(Stmt::Block { <> }),
 }
 
 // non-terminals(Expression)

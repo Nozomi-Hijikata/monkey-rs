@@ -4,7 +4,7 @@ pub enum Stmt {
     Let { name: String, value: Box<Expr> },
     Return { return_value: Box<Expr> },
     Expr { expression: Box<Expr> },
-    Block { statements: Vec<Stmt> },
+    Block { statements: Vec<Box<Stmt>> },
 }
 
 pub enum Expr {
@@ -22,13 +22,17 @@ pub enum Expr {
     },
     If {
         condition: Box<Expr>,
-        consequence: Stmt,
-        alternative: Option<Stmt>,
+        consequence: Box<Stmt>,
+        alternative: Option<Box<Stmt>>,
     },
     FuncLit {
         parameters: Vec<String>,
-        body: Stmt,
+        body: Box<Stmt>,
     },
+    // Call {
+    //     function: Box<Expr>,
+    //     arguments: Vec<Box<Expr>>,
+    // },
     // TODO:
     // Call expression
     // String literal
