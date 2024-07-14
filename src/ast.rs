@@ -26,15 +26,14 @@ pub enum Expr {
         alternative: Option<Box<Stmt>>,
     },
     FuncLit {
-        parameters: Vec<String>,
+        parameters: Vec<Box<Expr>>,
         body: Box<Stmt>,
     },
-    // Call {
-    //     function: Box<Expr>,
-    //     arguments: Vec<Box<Expr>>,
-    // },
+    Call {
+        function: String,
+        arguments: Vec<Box<Expr>>,
+    },
     // TODO:
-    // Call expression
     // String literal
     // Array Literal
     // Array Index Expression
@@ -115,10 +114,25 @@ impl Debug for Expr {
                     if i > 0 {
                         s.push_str(", ");
                     }
-                    s.push_str(p);
+                    s.push_str(&format!("{:?}", p));
                 }
                 s.push_str(") ");
                 s.push_str(&format!("{:?}", body));
+                write!(fmt, "{}", s)
+            }
+            Call {
+                ref function,
+                ref arguments,
+            } => {
+                let mut s = String::new();
+                s.push_str(&format!("{}(", function));
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(&format!("{:?}", arg));
+                }
+                s.push_str(")");
                 write!(fmt, "{}", s)
             }
         }

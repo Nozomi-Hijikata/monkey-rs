@@ -36,6 +36,7 @@ BlockStmt: Box<Stmt> = {
 pub Expr: Box<Expr> = {
   #[precedence(level="0")]
   Term,
+  CallExpr, // 関数呼び出しは優先度が高い
   // 同じ優先度の場合は左結合
   #[precedence(level="1")] #[assoc(side="left")] // 1: 乗算除算
   <left:Expr> <operator:ProductOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
@@ -61,17 +62,13 @@ FuncLit: Box<Expr> = {
     "fn" "(" <parameters:Params> ")" <body:BlockStmt> => Box::new(Expr::FuncLit{ parameters: parameters, body: body }),
 };
 
-Params: Vec<String> = Comma<Identifier>;
+Params: Vec<Box<Expr>> = Comma<Expr>;
 
-Comma<T>: Vec<T> = {
-    <mut v:(<T> ",")*> <e:T?> => match e {
-        None => v,
-        Some(e) => {
-            v.push(e);
-            v
-        }
-    }
+CallExpr: Box<Expr> = {
+    <function:Identifier> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
 };
+
+Arguments: Vec<Box<Expr>> = Comma<Expr>;
 
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
@@ -133,4 +130,16 @@ EqualsOp: Opcode = {
 LessGreaterOp: Opcode = {
     "<" => Opcode::Lt,
     ">" => Opcode::Gt,
+};
+
+// macros
+
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
 };
