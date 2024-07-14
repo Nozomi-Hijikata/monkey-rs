@@ -91,11 +91,53 @@ fn test_prefix_expr() {
 
 #[test]
 fn test_if_expr() {
-    let stmt = grammar::ExprParser::new().parse("if (true) { 1; }").unwrap();
+    let stmt = grammar::ExprParser::new()
+        .parse("if (true) { 1; }")
+        .unwrap();
     assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new().parse("if (true) { 1; } else { 2; }").unwrap();
+    let stmt = grammar::ExprParser::new()
+        .parse("if (true) { 1; } else { 2; }")
+        .unwrap();
     assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n} else {\n  2\n}");
+}
+
+#[test]
+fn test_operator_precedence() {
+    let expr = grammar::ExprParser::new().parse("-a * b").unwrap();
+    assert_eq!(format!("{:?}", expr), "((-a) * b)");
+
+    let expr = grammar::ExprParser::new().parse("!(-a)").unwrap();
+    assert_eq!(format!("{:?}", expr), "(!(-a))");
+
+    let expr = grammar::ExprParser::new().parse("!-a").unwrap();
+    assert_eq!(format!("{:?}", expr), "(!(-a))");
+
+    let expr = grammar::ExprParser::new().parse("!!-a").unwrap();
+    assert_eq!(format!("{:?}", expr), "(!(!(-a)))");
+
+    let expr = grammar::ExprParser::new().parse("!!true").unwrap();
+    assert_eq!(format!("{:?}", expr), "(!(!true))");
+
+    let expr = grammar::ExprParser::new().parse("a + b * c").unwrap();
+    assert_eq!(format!("{:?}", expr), "(a + (b * c))");
+
+    let expr = grammar::ExprParser::new().parse("(a + b) * c").unwrap();
+    assert_eq!(format!("{:?}", expr), "((a + b) * c)");
+
+    let expr = grammar::ExprParser::new().parse("a * b + c").unwrap();
+    assert_eq!(format!("{:?}", expr), "((a * b) + c)");
+
+    let expr = grammar::ExprParser::new().parse("a + b + c").unwrap();
+    assert_eq!(format!("{:?}", expr), "((a + b) + c)");
+
+    let expr = grammar::ExprParser::new().parse("a * b * c").unwrap();
+    assert_eq!(format!("{:?}", expr), "((a * b) * c)");
+
+    let expr = grammar::ExprParser::new()
+        .parse("a + b * c + d / e - f")
+        .unwrap();
+    assert_eq!(format!("{:?}", expr), "(((a + (b * c)) + (d / e)) - f)");
 }
 
 #[test]

@@ -4,6 +4,10 @@ use crate::ast::{Stmt, Expr, Opcode};
 grammar;
 
 // non-terminals(Statements)
+Stmts: Vec<Stmt> = {
+    (Stmt)* => <>.into_iter().collect(),
+};
+
 pub Stmt: Stmt = {
   LetStmt,
   ReturnStmt,
@@ -11,9 +15,6 @@ pub Stmt: Stmt = {
   BlockStmt,
 };
 
-Stmts: Vec<Stmt> = {
-    (Stmt)* => <>.into_iter().collect(),
-};
 
 LetStmt: Stmt = {
     "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::LetStmt{<>},
@@ -52,12 +53,15 @@ IfExpr: Box<Expr> = {
       =>Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: None }),
 };
 
+PrefixExpr: Box<Expr> = {
+    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
+};
 
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
-    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
+    PrefixExpr,
     "(" <Expr> ")",
 };
 
