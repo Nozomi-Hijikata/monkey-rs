@@ -209,6 +209,12 @@ fn test_expr_stmt() {
 
     let stmt = grammar::StmtParser::new().parse("1 * 2 + 3;").unwrap();
     assert_eq!(format!("{:?}", stmt), "((1 * 2) + 3)");
+
+    let stmt = grammar::StmtParser::new().parse("1 + 2 - 3;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "((1 + 2) - 3)");
+
+    let stmt = grammar::StmtParser::new().parse("1 * 2 - 3 / 4;").unwrap();
+    assert_eq!(format!("{:?}", stmt), "((1 * 2) - (3 / 4))");
 }
 
 #[test]
