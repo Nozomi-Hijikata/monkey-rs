@@ -1,10 +1,10 @@
 use std::fmt::{Debug, Error, Formatter};
 
 pub enum Stmt {
-    LetStmt { name: String, value: Box<Expr> },
-    ReturnStmt { return_value: Box<Expr> },
-    ExprStmt { expression: Box<Expr> },
-    BlockStmt { statements: Vec<Stmt> },
+    Let { name: String, value: Box<Expr> },
+    Return { return_value: Box<Expr> },
+    Expr { expression: Box<Expr> },
+    Block { statements: Vec<Stmt> },
 }
 
 pub enum Expr {
@@ -20,7 +20,7 @@ pub enum Expr {
         operator: Opcode,
         right: Box<Expr>,
     },
-    IfExpr {
+    If {
         condition: Box<Expr>,
         consequence: Stmt,
         alternative: Option<Stmt>,
@@ -55,16 +55,16 @@ impl Debug for Stmt {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         use self::Stmt::*;
         match *self {
-            LetStmt {
+            Let {
                 ref name,
                 ref value,
             } => write!(fmt, "let {} = {:?}", name, value),
-            ReturnStmt { ref return_value } => write!(fmt, "return {:?}", return_value),
-            ExprStmt { ref expression } => write!(fmt, "{:?}", expression),
-            BlockStmt { ref statements } => {
-                write!(fmt, "{{\n")?;
+            Return { ref return_value } => write!(fmt, "return {:?}", return_value),
+            Expr { ref expression } => write!(fmt, "{:?}", expression),
+            Block { ref statements } => {
+                writeln!(fmt, "{{")?;
                 for stmt in statements {
-                    write!(fmt, "  {:?}\n", stmt)?;
+                    writeln!(fmt, "  {:?}", stmt)?;
                 }
                 write!(fmt, "}}")
             }
@@ -88,7 +88,7 @@ impl Debug for Expr {
                 ref operator,
                 ref right,
             } => write!(fmt, "({:?}{:?})", operator, right),
-            IfExpr {
+            If {
                 ref condition,
                 ref consequence,
                 ref alternative,

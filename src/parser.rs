@@ -139,7 +139,10 @@ fn test_func_literal() {
     let stmt = grammar::ExprParser::new()
         .parse("fn(a, b, c) { 1 * 2 + 3; 4; }")
         .unwrap();
-    assert_eq!(format!("{:?}", stmt), "fn(a, b, c) {\n  ((1 * 2) + 3)\n  4\n}");
+    assert_eq!(
+        format!("{:?}", stmt),
+        "fn(a, b, c) {\n  ((1 * 2) + 3)\n  4\n}"
+    );
 }
 
 #[test]

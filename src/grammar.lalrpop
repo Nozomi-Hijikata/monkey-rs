@@ -17,19 +17,19 @@ pub Stmt: Stmt = {
 
 
 LetStmt: Stmt = {
-    "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::LetStmt{<>},
+    "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::Let{<>},
 };
 
 ReturnStmt: Stmt = {
-    "return" <return_value:Expr> ";" => Stmt::ReturnStmt{ <> },
+    "return" <return_value:Expr> ";" => Stmt::Return{ <> },
 };
 
 ExprStmt: Stmt = {
-    <expression:Expr> ";" => Stmt::ExprStmt{ <> },
+    <expression:Expr> ";" => Stmt::Expr{ <> },
 };
 
 BlockStmt: Stmt = {
-    "{" <statements:Stmts> "}" => Stmt::BlockStmt { <> },
+    "{" <statements:Stmts> "}" => Stmt::Block { <> },
 }
 
 // non-terminals(Expression)
@@ -52,9 +52,9 @@ pub Expr: Box<Expr> = {
 
 IfExpr: Box<Expr> = {
     "if" "(" <condition:Expr> ")" <consequence:BlockStmt> "else" <alternative:BlockStmt>
-      => Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: Some(alternative) }),
+      => Box::new(Expr::If { condition: condition, consequence: consequence, alternative: Some(alternative) }),
     "if" "(" <condition:Expr> ")" <consequence:BlockStmt>
-      =>Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: None }),
+      =>Box::new(Expr::If { condition: condition, consequence: consequence, alternative: None }),
 };
 
 FuncLit: Box<Expr> = {
