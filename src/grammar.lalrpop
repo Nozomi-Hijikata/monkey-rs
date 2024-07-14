@@ -8,24 +8,41 @@ pub Stmt: Stmt = {
   LetStmt,
   ReturnStmt,
   ExprStmt,
+  BlockStmt,
+};
+
+Stmts: Vec<Stmt> = {
+    (Stmt)* => <>.into_iter().collect(),
 };
 
 LetStmt: Stmt = {
     "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::LetStmt{<>},
 };
 
+// TODO: セミコロンを除外してもparseできるようにする
 ReturnStmt: Stmt = {
     "return" <return_value:Expr> ";" => Stmt::ReturnStmt{ <> },
 };
 
+// TODO: セミコロンを除外してもparseできるようにする
 ExprStmt: Stmt = {
     <expression:Expr> ";" => Stmt::ExprStmt{ <> },
 };
 
+BlockStmt: Stmt = {
+    "{" <statements:Stmts> "}" => Stmt::BlockStmt { <> },
+}
+
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
+  IfExpr,
   <left:Expr> <operator:ExprOp> <right:Factor> => Box::new(Expr::InfixOp{ <> }),
   Factor,
+};
+
+IfExpr: Box<Expr> = {
+    "if" "(" <condition:Expr> ")" <consequence:BlockStmt> "else" <alternative:BlockStmt> => Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: Some(alternative) }),
+    "if" "(" <condition:Expr> ")" <consequence:BlockStmt> =>Box::new(Expr::IfExpr { condition: condition, consequence: consequence, alternative: None }),
 };
 
 
@@ -47,7 +64,9 @@ match {
     "true",
     "false",
     "let",
-    "return"
+    "return",
+    "if",
+    "else",
 } else {
     r"[a-zA-Z_][a-zA-Z0-9_]*",
     _

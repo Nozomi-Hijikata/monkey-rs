@@ -37,16 +37,16 @@ fn test_boolean() {
 
 #[test]
 fn test_infix_expr() {
-    let expr = grammar::ExprParser::new().parse("1 + 2 * 3").unwrap();
+    let expr = grammar::ExprParser::new().parse("1+ 2 * 3").unwrap();
     assert_eq!(format!("{:?}", expr), "(1 + (2 * 3))");
 
-    let expr = grammar::ExprParser::new().parse("1 * 2 + 3").unwrap();
+    let expr = grammar::ExprParser::new().parse("1 * 2+ 3").unwrap();
     assert_eq!(format!("{:?}", expr), "((1 * 2) + 3)");
 
-    let expr = grammar::ExprParser::new().parse("1 + 2 + 3").unwrap();
+    let expr = grammar::ExprParser::new().parse("1 + 2+ 3").unwrap();
     assert_eq!(format!("{:?}", expr), "((1 + 2) + 3)");
 
-    let expr = grammar::ExprParser::new().parse("1 * 2 * 3").unwrap();
+    let expr = grammar::ExprParser::new().parse("1 *2 * 3").unwrap();
     assert_eq!(format!("{:?}", expr), "((1 * 2) * 3)");
 
     let expr = grammar::ExprParser::new().parse("1 + 2 * 3 + 4").unwrap();
@@ -87,6 +87,15 @@ fn test_prefix_expr() {
 
     let expr = grammar::ExprParser::new().parse("1 + !2").unwrap();
     assert_eq!(format!("{:?}", expr), "(1 + (!2))");
+}
+
+#[test]
+fn test_if_expr() {
+    let stmt = grammar::ExprParser::new().parse("if (true) { 1; }").unwrap();
+    assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n}");
+
+    let stmt = grammar::ExprParser::new().parse("if (true) { 1; } else { 2; }").unwrap();
+    assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n} else {\n  2\n}");
 }
 
 #[test]
@@ -200,4 +209,16 @@ fn test_expr_stmt() {
 
     let stmt = grammar::StmtParser::new().parse("1 * 2 + 3;").unwrap();
     assert_eq!(format!("{:?}", stmt), "((1 * 2) + 3)");
+}
+
+#[test]
+fn test_block_stmt() {
+    let stmt = grammar::StmtParser::new().parse("{ 1; }").unwrap();
+    assert_eq!(format!("{:?}", stmt), "{\n  1\n}");
+
+    let stmt = grammar::StmtParser::new().parse("{ 1; 2; }").unwrap();
+    assert_eq!(format!("{:?}", stmt), "{\n  1\n  2\n}");
+
+    let stmt = grammar::StmtParser::new().parse("{ 1+2; 2*3; }").unwrap();
+    assert_eq!(format!("{:?}", stmt), "{\n  (1 + 2)\n  (2 * 3)\n}");
 }

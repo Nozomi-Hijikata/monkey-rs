@@ -4,8 +4,7 @@ pub enum Stmt {
     LetStmt { name: String, value: Box<Expr> },
     ReturnStmt { return_value: Box<Expr> },
     ExprStmt { expression: Box<Expr> },
-    // TODO:
-    // Block Statement
+    BlockStmt { statements: Vec<Stmt> },
 }
 
 pub enum Expr {
@@ -21,8 +20,12 @@ pub enum Expr {
         operator: Opcode,
         right: Box<Expr>,
     },
+    IfExpr {
+        condition: Box<Expr>,
+        consequence: Stmt,
+        alternative: Option<Stmt>,
+    },
     // TODO:
-    // IfExpression
     // Function Literal
     // Call expression
     // String literal
@@ -51,6 +54,13 @@ impl Debug for Stmt {
             } => write!(fmt, "let {} = {:?}", name, value),
             ReturnStmt { ref return_value } => write!(fmt, "return {:?}", return_value),
             ExprStmt { ref expression } => write!(fmt, "{:?}", expression),
+            BlockStmt { ref statements } => {
+                write!(fmt, "{{\n")?;
+                for stmt in statements {
+                    write!(fmt, "  {:?}\n", stmt)?;
+                }
+                write!(fmt, "}}")
+            }
         }
     }
 }
@@ -71,6 +81,19 @@ impl Debug for Expr {
                 ref operator,
                 ref right,
             } => write!(fmt, "({:?}{:?})", operator, right),
+            IfExpr {
+                ref condition,
+                ref consequence,
+                ref alternative,
+            } => {
+                let mut s = String::new();
+                s.push_str(&format!("if ({:?}) ", condition));
+                s.push_str(&format!("{:?}", consequence));
+                if let Some(ref alt) = *alternative {
+                    s.push_str(&format!(" else {:?}", alt));
+                }
+                write!(fmt, "{}", s)
+            }
         }
     }
 }
