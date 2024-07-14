@@ -1,6 +1,13 @@
+use crate::ast::Program;
 use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(grammar);
+
+pub fn parse_program(input: &str) -> Result<Program, String> {
+    grammar::ProgramParser::new()
+        .parse(input)
+        .map_err(|e| format!("{:?}", e))
+}
 
 #[test]
 fn test_integer() {
@@ -210,7 +217,10 @@ fn test_operator_precedence() {
         .parse("add(a + b + c * d / f + g)")
         .unwrap();
 
-    assert_eq!(format!("{:?}", expr), "add((((a + b) + ((c * d) / f)) + g))");
+    assert_eq!(
+        format!("{:?}", expr),
+        "add((((a + b) + ((c * d) / f)) + g))"
+    );
 }
 
 #[test]
@@ -359,4 +369,66 @@ fn test_block_stmt() {
 
     let stmt = grammar::StmtParser::new().parse("{ 1+2; 2*3; }").unwrap();
     assert_eq!(format!("{:?}", stmt), "{\n  (1 + 2)\n  (2 * 3)\n}");
+}
+
+#[test]
+fn test_program() {
+    let program = grammar::ProgramParser::new().parse("1;").unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[1]");
+
+    let program = grammar::ProgramParser::new().parse("1; 2;").unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[1, 2]");
+
+    let program = grammar::ProgramParser::new().parse("let a = 1;").unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[let a = 1]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("let a = 1; 2;")
+        .unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[let a = 1, 2]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("let a = 1; let b = 2;")
+        .unwrap();
+    assert_eq!(
+        format!("{:?}", program.statements),
+        "[let a = 1, let b = 2]"
+    );
+
+    let program = grammar::ProgramParser::new().parse("return 1;").unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[return 1]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("return 1; return 2;")
+        .unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[return 1, return 2]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("return 1; let a = 2;")
+        .unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[return 1, let a = 2]");
+
+    let program = grammar::ProgramParser::new().parse("1; return 2;").unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[1, return 2]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("1; return 2; 3;")
+        .unwrap();
+    assert_eq!(format!("{:?}", program.statements), "[1, return 2, 3]");
+
+    let program = grammar::ProgramParser::new()
+        .parse("1; return 2; let a = 3;")
+        .unwrap();
+    assert_eq!(
+        format!("{:?}", program.statements),
+        "[1, return 2, let a = 3]"
+    );
+
+    let program = grammar::ProgramParser::new()
+        .parse("1; return 2; let a = 3; 4;")
+        .unwrap();
+    assert_eq!(
+        format!("{:?}", program.statements),
+        "[1, return 2, let a = 3, 4]"
+    );
 }

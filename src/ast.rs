@@ -1,5 +1,10 @@
 use std::fmt::{Debug, Error, Formatter};
 
+#[derive(Debug)]
+pub struct Program {
+    pub statements: Vec<Box<Stmt>>,
+}
+
 pub enum Stmt {
     Let { name: String, value: Box<Expr> },
     Return { return_value: Box<Expr> },

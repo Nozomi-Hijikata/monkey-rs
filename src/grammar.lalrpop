@@ -1,7 +1,12 @@
 use std::str::FromStr;
-use crate::ast::{Stmt, Expr, Opcode};
+use crate::ast::{Stmt, Expr, Opcode, Program};
 
 grammar;
+
+// non-terminals(Program)
+pub Program: Program = {
+    <statements:Stmts> => Program { statements: statements }
+};
 
 // non-terminals(Statements)
 Stmts: Vec<Box<Stmt>> = {
