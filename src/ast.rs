@@ -1,9 +1,9 @@
 use std::fmt::{Debug, Error, Formatter};
 
 pub enum Stmt {
-    LetStmt(Box<Expr>, Box<Expr>),
-    ReturnStmt(Box<Expr>),
-    ExprStmt(Box<Expr>),
+    LetStmt { name: String, value: Box<Expr> },
+    ReturnStmt { return_value: Box<Expr> },
+    ExprStmt { expression: Box<Expr> },
     // TODO:
     // Block Statement
 }
@@ -12,8 +12,15 @@ pub enum Expr {
     Number(i32),
     Identifier(String),
     Boolean(bool),
-    InfixOp(Box<Expr>, Opcode, Box<Expr>),
-    PrefixOp(Opcode, Box<Expr>),
+    InfixOp {
+        left: Box<Expr>,
+        operator: Opcode,
+        right: Box<Expr>,
+    },
+    PrefixOp {
+        operator: Opcode,
+        right: Box<Expr>,
+    },
     // TODO:
     // IfExpression
     // Function Literal
@@ -38,9 +45,12 @@ impl Debug for Stmt {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         use self::Stmt::*;
         match *self {
-            LetStmt(ref s, ref e) => write!(fmt, "let {:?} = {:?}", s, e),
-            ReturnStmt(ref e) => write!(fmt, "return {:?}", e),
-            ExprStmt(ref e) => write!(fmt, "{:?}", e),
+            LetStmt {
+                ref name,
+                ref value,
+            } => write!(fmt, "let {} = {:?}", name, value),
+            ReturnStmt { ref return_value } => write!(fmt, "return {:?}", return_value),
+            ExprStmt { ref expression } => write!(fmt, "{:?}", expression),
         }
     }
 }
@@ -52,8 +62,15 @@ impl Debug for Expr {
             Number(n) => write!(fmt, "{:?}", n),
             Identifier(ref s) => write!(fmt, "{}", s),
             Boolean(b) => write!(fmt, "{:?}", b),
-            InfixOp(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
-            PrefixOp(op, ref e) => write!(fmt, "({:?}{:?})", op, e),
+            InfixOp {
+                ref left,
+                ref operator,
+                ref right,
+            } => write!(fmt, "({:?} {:?} {:?})", left, operator, right),
+            PrefixOp {
+                ref operator,
+                ref right,
+            } => write!(fmt, "({:?}{:?})", operator, right),
         }
     }
 }

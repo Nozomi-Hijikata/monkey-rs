@@ -11,26 +11,26 @@ pub Stmt: Stmt = {
 };
 
 LetStmt: Stmt = {
-    "let" <Term> "=" <Expr> ";" => Stmt::LetStmt(<>),
+    "let" <name:Identifier> "=" <value:Expr> ";" => Stmt::LetStmt{<>},
 };
 
 ReturnStmt: Stmt = {
-    "return" <Expr> ";" => Stmt::ReturnStmt(<>),
+    "return" <return_value:Expr> ";" => Stmt::ReturnStmt{ <> },
 };
 
 ExprStmt: Stmt = {
-    <Expr> ";" => Stmt::ExprStmt(<>),
+    <expression:Expr> ";" => Stmt::ExprStmt{ <> },
 };
 
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
-  Expr ExprOp Factor => Box::new(Expr::InfixOp(<>)),
+  <left:Expr> <operator:ExprOp> <right:Factor> => Box::new(Expr::InfixOp{ <> }),
   Factor,
 };
 
 
 Factor: Box<Expr> = {
-    Factor FactorOp Term => Box::new(Expr::InfixOp(<>)),
+    <left:Factor> <operator:FactorOp> <right:Term> => Box::new(Expr::InfixOp{ <> }),
     Term,
 };
 
@@ -38,7 +38,7 @@ Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Identifier => Box::new(Expr::Identifier(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
-    PrefixOp Term => Box::new(Expr::PrefixOp(<>)),
+    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
     "(" <Expr> ")",
 };
 
