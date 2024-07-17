@@ -110,44 +110,44 @@ fn test_prefix_expr() {
 
 #[test]
 fn test_if_expr() {
-    let stmt = grammar::ExprParser::new()
+    let expr = grammar::ExprParser::new()
         .parse("if (true) { 1; }")
         .unwrap();
-    assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n}");
+    assert_eq!(format!("{:?}", expr), "if (true) {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new()
+    let expr = grammar::ExprParser::new()
         .parse("if (true) { 1; } else { 2; }")
         .unwrap();
-    assert_eq!(format!("{:?}", stmt), "if (true) {\n  1\n} else {\n  2\n}");
+    assert_eq!(format!("{:?}", expr), "if (true) {\n  1\n} else {\n  2\n}");
 }
 
 #[test]
 fn test_func_literal() {
-    let stmt = grammar::ExprParser::new().parse("fn() { 1; }").unwrap();
-    assert_eq!(format!("{:?}", stmt), "fn() {\n  1\n}");
+    let expr = grammar::ExprParser::new().parse("fn() { 1; }").unwrap();
+    assert_eq!(format!("{:?}", expr), "fn() {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new().parse("fn(a) { 1; }").unwrap();
-    assert_eq!(format!("{:?}", stmt), "fn(a) {\n  1\n}");
+    let expr = grammar::ExprParser::new().parse("fn(a) { 1; }").unwrap();
+    assert_eq!(format!("{:?}", expr), "fn(a) {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new().parse("fn(a, b) { 1; }").unwrap();
-    assert_eq!(format!("{:?}", stmt), "fn(a, b) {\n  1\n}");
+    let expr = grammar::ExprParser::new().parse("fn(a, b) { 1; }").unwrap();
+    assert_eq!(format!("{:?}", expr), "fn(a, b) {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new()
+    let expr = grammar::ExprParser::new()
         .parse("fn(a, b, c) { 1; }")
         .unwrap();
-    assert_eq!(format!("{:?}", stmt), "fn(a, b, c) {\n  1\n}");
+    assert_eq!(format!("{:?}", expr), "fn(a, b, c) {\n  1\n}");
 
-    let stmt = grammar::ExprParser::new()
+    let expr = grammar::ExprParser::new()
         .parse("fn(a, b, c) { 1; 2; }")
         .unwrap();
 
-    assert_eq!(format!("{:?}", stmt), "fn(a, b, c) {\n  1\n  2\n}");
+    assert_eq!(format!("{:?}", expr), "fn(a, b, c) {\n  1\n  2\n}");
 
-    let stmt = grammar::ExprParser::new()
+    let expr = grammar::ExprParser::new()
         .parse("fn(a, b, c) { 1 * 2 + 3; 4; }")
         .unwrap();
     assert_eq!(
-        format!("{:?}", stmt),
+        format!("{:?}", expr),
         "fn(a, b, c) {\n  ((1 * 2) + 3)\n  4\n}"
     );
 }
