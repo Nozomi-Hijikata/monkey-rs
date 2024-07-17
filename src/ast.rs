@@ -13,7 +13,7 @@ pub enum Stmt {
 }
 
 pub enum Expr {
-    Number(i32),
+    Number(i64),
     Identifier(String),
     Boolean(bool),
     InfixOp {
