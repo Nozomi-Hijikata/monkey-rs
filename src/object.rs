@@ -1,4 +1,5 @@
 use std::any::Any;
+#[allow(dead_code)]
 pub trait Object {
     fn as_any(&self) -> &dyn Any;
     fn object_type(&self) -> ObjectType;
@@ -7,7 +8,7 @@ pub trait Object {
 
 const INTEGER_OBJ: &str = "INTEGER";
 const NULL_OBJ: &str = "NULL";
-// const BOOLEAN_OBJ: &str = "BOOLEAN";
+const BOOLEAN_OBJ: &str = "BOOLEAN";
 // const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 // const ERROR_OBJ: &str = "ERROR";
 // const FUNCTION_OBJ: &str = "FUNCTION";
@@ -20,7 +21,7 @@ const NULL_OBJ: &str = "NULL";
 pub enum ObjectType {
     Integer,
     Null,
-    // Boolean,
+    Boolean,
     // ReturnValue,
     // Error,
     // Function,
@@ -30,12 +31,13 @@ pub enum ObjectType {
     // Hash,
 }
 
+#[allow(dead_code)]
 impl ObjectType {
     pub fn as_str(&self) -> &str {
         match self {
             ObjectType::Integer => INTEGER_OBJ,
             ObjectType::Null => NULL_OBJ,
-            // ObjectType::Boolean => BOOLEAN_OBJ,
+            ObjectType::Boolean => BOOLEAN_OBJ,
             // ObjectType::ReturnValue => RETURN_VALUE_OBJ,
             // ObjectType::Error => ERROR_OBJ,
             // ObjectType::Function => FUNCTION_OBJ,
@@ -47,7 +49,6 @@ impl ObjectType {
     }
 }
 
-#[derive(Debug, PartialEq)]
 pub struct Integer {
     pub value: i64,
 }
@@ -77,5 +78,22 @@ impl Object for Null {
 
     fn inspect(&self) -> String {
         "null".to_string()
+    }
+}
+
+pub struct Boolean {
+    pub value: bool,
+}
+
+impl Object for Boolean {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Boolean
+    }
+
+    fn inspect(&self) -> String {
+        self.value.to_string()
     }
 }
