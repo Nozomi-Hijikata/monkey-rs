@@ -1,4 +1,9 @@
+use crate::object::Object;
 use std::fmt::{Debug, Error, Formatter};
+
+pub trait Node {
+    fn eval(&self) -> Box<dyn Object>;
+}
 
 #[derive(Debug)]
 pub struct Program {

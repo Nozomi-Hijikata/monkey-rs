@@ -1,4 +1,6 @@
 mod ast;
+mod evaluator;
+mod object;
 mod parser;
 
 use parser::parse_program;
