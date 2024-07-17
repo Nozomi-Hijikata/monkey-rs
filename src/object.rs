@@ -1,11 +1,13 @@
+use std::any::Any;
 pub trait Object {
+    fn as_any(&self) -> &dyn Any;
     fn object_type(&self) -> ObjectType;
     fn inspect(&self) -> String;
 }
 
 const INTEGER_OBJ: &str = "INTEGER";
+const NULL_OBJ: &str = "NULL";
 // const BOOLEAN_OBJ: &str = "BOOLEAN";
-// const NULL_OBJ: &str = "NULL";
 // const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 // const ERROR_OBJ: &str = "ERROR";
 // const FUNCTION_OBJ: &str = "FUNCTION";
@@ -17,8 +19,8 @@ const INTEGER_OBJ: &str = "INTEGER";
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum ObjectType {
     Integer,
+    Null,
     // Boolean,
-    // Null,
     // ReturnValue,
     // Error,
     // Function,
@@ -32,8 +34,8 @@ impl ObjectType {
     pub fn as_str(&self) -> &str {
         match self {
             ObjectType::Integer => INTEGER_OBJ,
+            ObjectType::Null => NULL_OBJ,
             // ObjectType::Boolean => BOOLEAN_OBJ,
-            // ObjectType::Null => NULL_OBJ,
             // ObjectType::ReturnValue => RETURN_VALUE_OBJ,
             // ObjectType::Error => ERROR_OBJ,
             // ObjectType::Function => FUNCTION_OBJ,
@@ -45,16 +47,35 @@ impl ObjectType {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Integer {
     pub value: i64,
 }
 
 impl Object for Integer {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn object_type(&self) -> ObjectType {
         ObjectType::Integer
     }
 
     fn inspect(&self) -> String {
         self.value.to_string()
+    }
+}
+
+pub struct Null;
+
+impl Object for Null {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Null
+    }
+
+    fn inspect(&self) -> String {
+        "null".to_string()
     }
 }
