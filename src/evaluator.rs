@@ -1,5 +1,6 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::object::{Boolean, Integer, Null, ObjectRef};
+use crate::{box_it, downcast_ref};
 
 pub fn eval_program(program: &Program) -> ObjectRef {
     eval(program)
@@ -11,7 +12,7 @@ fn eval(node: &dyn Node) -> ObjectRef {
 
 impl Node for Program {
     fn eval(&self) -> ObjectRef {
-        let mut result: ObjectRef = Box::new(Null);
+        let mut result: ObjectRef = box_it!(Null);
         for stmt in &self.statements {
             result = eval(stmt.as_ref());
         }
@@ -39,7 +40,7 @@ impl Node for Stmt {
             }
             Stmt::Block { ref statements } => {
                 println!("Block statement: {:?}", statements);
-                let mut result: ObjectRef = Box::new(Null);
+                let mut result: ObjectRef = box_it!(Null);
                 for stmt in statements {
                     result = eval(stmt.as_ref());
                 }
@@ -52,10 +53,10 @@ impl Node for Stmt {
 impl Node for Expr {
     fn eval(&self) -> ObjectRef {
         match self {
-            Expr::Number(n) => Box::new(Integer { value: *n }),
+            Expr::Number(n) => box_it!(Integer { value: *n }),
             Expr::Identifier(ident) => {
                 println!("Identifier expression: {}", ident);
-                Box::new(Null)
+                box_it!(Null)
             }
             Expr::Boolean(b) => eval_native_boolean(b),
             Expr::InfixOp {
@@ -83,59 +84,58 @@ impl Node for Expr {
                     "If expression: {:?} {:?} {:?}",
                     condition, consequence, alternative
                 );
-                Box::new(Null)
+                box_it!(Null)
             }
             Expr::FuncLit {
                 ref parameters,
                 ref body,
             } => {
                 println!("Function literal expression: {:?} {:?}", parameters, body);
-                Box::new(Null)
+                box_it!(Null)
             }
             Expr::Call {
                 ref function,
                 ref arguments,
             } => {
                 println!("Call expression: {:?} {:?}", function, arguments);
-                Box::new(Null)
+                box_it!(Null)
             }
         }
     }
 }
 
 fn eval_infix_expression(operator: &Opcode, left: &ObjectRef, right: &ObjectRef) -> ObjectRef {
-    if let (Some(left_int), Some(right_int)) = (
-        left.as_any().downcast_ref::<Integer>(),
-        right.as_any().downcast_ref::<Integer>(),
-    ) {
+    if let (Some(left_int), Some(right_int)) =
+        (downcast_ref!(left, Integer), downcast_ref!(right, Integer))
+    {
         eval_integer_infix_expression(operator, left_int, right_int)
     } else {
         match operator {
             Opcode::Eq | Opcode::NotEq => eval_boolean_infix_expression(operator, left, right),
-            _ => Box::new(Null),
+            _ => box_it!(Null),
         }
     }
 }
 
 fn eval_integer_infix_expression(operator: &Opcode, left: &Integer, right: &Integer) -> ObjectRef {
     match operator {
-        Opcode::Add => Box::new(Integer {
+        Opcode::Add => box_it!(Integer {
             value: left.value + right.value,
         }),
-        Opcode::Sub => Box::new(Integer {
+        Opcode::Sub => box_it!(Integer {
             value: left.value - right.value,
         }),
-        Opcode::Mul => Box::new(Integer {
+        Opcode::Mul => box_it!(Integer {
             value: left.value * right.value,
         }),
-        Opcode::Div => Box::new(Integer {
+        Opcode::Div => box_it!(Integer {
             value: left.value / right.value,
         }),
         Opcode::Eq => eval_native_boolean(&(left.value == right.value)),
         Opcode::NotEq => eval_native_boolean(&(left.value != right.value)),
         Opcode::Lt => eval_native_boolean(&(left.value < right.value)),
         Opcode::Gt => eval_native_boolean(&(left.value > right.value)),
-        _ => Box::new(Null),
+        _ => box_it!(Null),
     }
 }
 
@@ -144,51 +144,48 @@ fn eval_boolean_infix_expression(
     left: &ObjectRef,
     right: &ObjectRef,
 ) -> ObjectRef {
-    match (
-        left.as_any().downcast_ref::<Boolean>(),
-        right.as_any().downcast_ref::<Boolean>(),
-    ) {
+    match (downcast_ref!(left, Boolean), downcast_ref!(right, Boolean)) {
         (Some(left_bool), Some(right_bool)) => match operator {
             Opcode::Eq => eval_native_boolean(&(left_bool.value == right_bool.value)),
             Opcode::NotEq => eval_native_boolean(&(left_bool.value != right_bool.value)),
-            _ => Box::new(Null),
+            _ => box_it!(Null),
         },
-        _ => Box::new(Null),
+        _ => box_it!(Null),
     }
 }
 
 fn eval_prefix_expression(operator: &Opcode, right: &ObjectRef) -> ObjectRef {
     match operator {
         Opcode::Bang => eval_bang_operator_expression(right),
-        Opcode::Sub => match right.as_any().downcast_ref::<Integer>() {
-            Some(integer) => Box::new(Integer {
+        Opcode::Sub => match downcast_ref!(right, Integer) {
+            Some(integer) => box_it!(Integer {
                 value: -integer.value,
             }),
-            _ => Box::new(Null),
+            _ => box_it!(Null),
         },
-        _ => Box::new(Null),
+        _ => box_it!(Null),
     }
 }
 
 fn eval_bang_operator_expression(right: &ObjectRef) -> ObjectRef {
-    match right.as_any().downcast_ref::<Boolean>() {
+    match downcast_ref!(right, Boolean) {
         Some(boolean) => {
             if boolean.value {
-                Box::new(Boolean { value: false })
+                box_it!(Boolean { value: false })
             } else {
-                Box::new(Boolean { value: true })
+                box_it!(Boolean { value: true })
             }
         }
-        _ => Box::new(Boolean { value: false }),
+        _ => box_it!(Boolean { value: false }),
     }
 }
 
 // TODO: TRUE, FALSE, NULLは使い回しできるようにする
 fn eval_native_boolean(input: &bool) -> ObjectRef {
     if *input {
-        Box::new(Boolean { value: true })
+        box_it!(Boolean { value: true })
     } else {
-        Box::new(Boolean { value: false })
+        box_it!(Boolean { value: false })
     }
 }
 
@@ -198,7 +195,7 @@ mod tests {
     use crate::parser::parse_program;
 
     fn assert_is_integer(object: &ObjectRef, expected_value: i64) {
-        if let Some(integer) = object.as_any().downcast_ref::<Integer>() {
+        if let Some(integer) = downcast_ref!(object, Integer) {
             assert_eq!(integer.value, expected_value);
         } else {
             panic!("Expected Integer object");

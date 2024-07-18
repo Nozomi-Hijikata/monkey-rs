@@ -2,6 +2,7 @@ mod ast;
 mod evaluator;
 mod object;
 mod parser;
+mod utils;
 
 use parser::parse_program;
 use std::io::{self, Write};
