@@ -108,40 +108,57 @@ fn eval_infix_expression(
     left: &Box<dyn Object>,
     right: &Box<dyn Object>,
 ) -> Box<dyn Object> {
-    match operator {
-        Opcode::Add | Opcode::Sub | Opcode::Mul | Opcode::Div => {
-            eval_integer_infix_expression(operator, left, right)
+    if let (Some(left_int), Some(right_int)) = (
+        left.as_any().downcast_ref::<Integer>(),
+        right.as_any().downcast_ref::<Integer>(),
+    ) {
+        eval_integer_infix_expression(operator, left_int, right_int)
+    } else {
+        match operator {
+            Opcode::Eq | Opcode::NotEq => eval_boolean_infix_expression(operator, left, right),
+            _ => Box::new(Null),
         }
-        Opcode::Eq | Opcode::NotEq | Opcode::Lt | Opcode::Gt => {
-            // eval_boolean_infix_expression(operator, left, right)
-            Box::new(Null)
-        }
-        _ => Box::new(Null),
     }
 }
 
 fn eval_integer_infix_expression(
     operator: &Opcode,
+    left: &Integer,
+    right: &Integer,
+) -> Box<dyn Object> {
+    match operator {
+        Opcode::Add => Box::new(Integer {
+            value: left.value + right.value,
+        }),
+        Opcode::Sub => Box::new(Integer {
+            value: left.value - right.value,
+        }),
+        Opcode::Mul => Box::new(Integer {
+            value: left.value * right.value,
+        }),
+        Opcode::Div => Box::new(Integer {
+            value: left.value / right.value,
+        }),
+        Opcode::Eq => eval_native_boolean(&(left.value == right.value)),
+        Opcode::NotEq => eval_native_boolean(&(left.value != right.value)),
+        Opcode::Lt => eval_native_boolean(&(left.value < right.value)),
+        Opcode::Gt => eval_native_boolean(&(left.value > right.value)),
+        _ => Box::new(Null),
+    }
+}
+
+fn eval_boolean_infix_expression(
+    operator: &Opcode,
     left: &Box<dyn Object>,
     right: &Box<dyn Object>,
 ) -> Box<dyn Object> {
     match (
-        left.as_any().downcast_ref::<Integer>(),
-        right.as_any().downcast_ref::<Integer>(),
+        left.as_any().downcast_ref::<Boolean>(),
+        right.as_any().downcast_ref::<Boolean>(),
     ) {
-        (Some(left_integer), Some(right_integer)) => match operator {
-            Opcode::Add => Box::new(Integer {
-                value: left_integer.value + right_integer.value,
-            }),
-            Opcode::Sub => Box::new(Integer {
-                value: left_integer.value - right_integer.value,
-            }),
-            Opcode::Mul => Box::new(Integer {
-                value: left_integer.value * right_integer.value,
-            }),
-            Opcode::Div => Box::new(Integer {
-                value: left_integer.value / right_integer.value,
-            }),
+        (Some(left_bool), Some(right_bool)) => match operator {
+            Opcode::Eq => eval_native_boolean(&(left_bool.value == right_bool.value)),
+            Opcode::NotEq => eval_native_boolean(&(left_bool.value != right_bool.value)),
             _ => Box::new(Null),
         },
         _ => Box::new(Null),
@@ -219,7 +236,7 @@ mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     fn test_eval_boolean_expression() {
         let tests = vec![
             ("true;", true),
