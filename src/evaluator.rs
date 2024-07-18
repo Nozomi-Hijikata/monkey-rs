@@ -1,17 +1,17 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
-use crate::object::{Boolean, Integer, Null, Object};
+use crate::object::{Boolean, Integer, Null, ObjectRef};
 
-pub fn eval_program(program: &Program) -> Box<dyn Object> {
+pub fn eval_program(program: &Program) -> ObjectRef {
     eval(program)
 }
 
-fn eval(node: &dyn Node) -> Box<dyn Object> {
+fn eval(node: &dyn Node) -> ObjectRef {
     node.eval()
 }
 
 impl Node for Program {
-    fn eval(&self) -> Box<dyn Object> {
-        let mut result: Box<dyn Object> = Box::new(Null);
+    fn eval(&self) -> ObjectRef {
+        let mut result: ObjectRef = Box::new(Null);
         for stmt in &self.statements {
             result = eval(stmt.as_ref());
         }
@@ -20,7 +20,7 @@ impl Node for Program {
 }
 
 impl Node for Stmt {
-    fn eval(&self) -> Box<dyn Object> {
+    fn eval(&self) -> ObjectRef {
         match self {
             Stmt::Let {
                 ref name,
@@ -39,7 +39,7 @@ impl Node for Stmt {
             }
             Stmt::Block { ref statements } => {
                 println!("Block statement: {:?}", statements);
-                let mut result: Box<dyn Object> = Box::new(Null);
+                let mut result: ObjectRef = Box::new(Null);
                 for stmt in statements {
                     result = eval(stmt.as_ref());
                 }
@@ -50,7 +50,7 @@ impl Node for Stmt {
 }
 
 impl Node for Expr {
-    fn eval(&self) -> Box<dyn Object> {
+    fn eval(&self) -> ObjectRef {
         match self {
             Expr::Number(n) => Box::new(Integer { value: *n }),
             Expr::Identifier(ident) => {
@@ -103,11 +103,7 @@ impl Node for Expr {
     }
 }
 
-fn eval_infix_expression(
-    operator: &Opcode,
-    left: &Box<dyn Object>,
-    right: &Box<dyn Object>,
-) -> Box<dyn Object> {
+fn eval_infix_expression(operator: &Opcode, left: &ObjectRef, right: &ObjectRef) -> ObjectRef {
     if let (Some(left_int), Some(right_int)) = (
         left.as_any().downcast_ref::<Integer>(),
         right.as_any().downcast_ref::<Integer>(),
@@ -121,11 +117,7 @@ fn eval_infix_expression(
     }
 }
 
-fn eval_integer_infix_expression(
-    operator: &Opcode,
-    left: &Integer,
-    right: &Integer,
-) -> Box<dyn Object> {
+fn eval_integer_infix_expression(operator: &Opcode, left: &Integer, right: &Integer) -> ObjectRef {
     match operator {
         Opcode::Add => Box::new(Integer {
             value: left.value + right.value,
@@ -149,9 +141,9 @@ fn eval_integer_infix_expression(
 
 fn eval_boolean_infix_expression(
     operator: &Opcode,
-    left: &Box<dyn Object>,
-    right: &Box<dyn Object>,
-) -> Box<dyn Object> {
+    left: &ObjectRef,
+    right: &ObjectRef,
+) -> ObjectRef {
     match (
         left.as_any().downcast_ref::<Boolean>(),
         right.as_any().downcast_ref::<Boolean>(),
@@ -165,7 +157,7 @@ fn eval_boolean_infix_expression(
     }
 }
 
-fn eval_prefix_expression(operator: &Opcode, right: &Box<dyn Object>) -> Box<dyn Object> {
+fn eval_prefix_expression(operator: &Opcode, right: &ObjectRef) -> ObjectRef {
     match operator {
         Opcode::Bang => eval_bang_operator_expression(right),
         Opcode::Sub => match right.as_any().downcast_ref::<Integer>() {
@@ -178,7 +170,7 @@ fn eval_prefix_expression(operator: &Opcode, right: &Box<dyn Object>) -> Box<dyn
     }
 }
 
-fn eval_bang_operator_expression(right: &Box<dyn Object>) -> Box<dyn Object> {
+fn eval_bang_operator_expression(right: &ObjectRef) -> ObjectRef {
     match right.as_any().downcast_ref::<Boolean>() {
         Some(boolean) => {
             if boolean.value {
@@ -192,7 +184,7 @@ fn eval_bang_operator_expression(right: &Box<dyn Object>) -> Box<dyn Object> {
 }
 
 // TODO: TRUE, FALSE, NULLは使い回しできるようにする
-fn eval_native_boolean(input: &bool) -> Box<dyn Object> {
+fn eval_native_boolean(input: &bool) -> ObjectRef {
     if *input {
         Box::new(Boolean { value: true })
     } else {
@@ -205,7 +197,7 @@ mod tests {
     use super::*;
     use crate::parser::parse_program;
 
-    fn assert_is_integer(object: &Box<dyn Object>, expected_value: i64) {
+    fn assert_is_integer(object: &ObjectRef, expected_value: i64) {
         if let Some(integer) = object.as_any().downcast_ref::<Integer>() {
             assert_eq!(integer.value, expected_value);
         } else {

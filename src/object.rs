@@ -6,6 +6,8 @@ pub trait Object {
     fn inspect(&self) -> String;
 }
 
+pub type ObjectRef = Box<dyn Object>;
+
 const INTEGER_OBJ: &str = "INTEGER";
 const NULL_OBJ: &str = "NULL";
 const BOOLEAN_OBJ: &str = "BOOLEAN";
