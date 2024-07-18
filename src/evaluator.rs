@@ -2,8 +2,8 @@ use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::object::{Boolean, Integer, Null, ObjectRef};
 use crate::{box_it, downcast_ref};
 
-pub fn eval_program(program: &Program) -> ObjectRef {
-    eval(program)
+pub fn eval_program(program: &Program) -> Result<ObjectRef, String> {
+    Ok(program.eval())
 }
 
 fn eval(node: &dyn Node) -> ObjectRef {
@@ -34,10 +34,7 @@ impl Node for Stmt {
                 println!("Return statement: {:?}", return_value);
                 return_value.eval()
             }
-            Stmt::Expr { ref expression } => {
-                println!("Expression statement: {:?}", expression);
-                expression.eval()
-            }
+            Stmt::Expr { ref expression } => expression.eval(),
             Stmt::Block { ref statements } => {
                 println!("Block statement: {:?}", statements);
                 let mut result: ObjectRef = box_it!(Null);
@@ -144,13 +141,16 @@ fn eval_boolean_infix_expression(
     left: &ObjectRef,
     right: &ObjectRef,
 ) -> ObjectRef {
-    match (downcast_ref!(left, Boolean), downcast_ref!(right, Boolean)) {
-        (Some(left_bool), Some(right_bool)) => match operator {
+    if let (Some(left_bool), Some(right_bool)) =
+        (downcast_ref!(left, Boolean), downcast_ref!(right, Boolean))
+    {
+        match operator {
             Opcode::Eq => eval_native_boolean(&(left_bool.value == right_bool.value)),
             Opcode::NotEq => eval_native_boolean(&(left_bool.value != right_bool.value)),
             _ => box_it!(Null),
-        },
-        _ => box_it!(Null),
+        }
+    } else {
+        box_it!(Null)
     }
 }
 
@@ -220,7 +220,7 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program);
+            let results = eval_program(&program).unwrap();
             assert_is_integer(&results, expected);
         }
     }
@@ -247,11 +247,13 @@ mod tests {
             ("(1 < 2) == false;", false),
             ("(1 > 2) == true;", false),
             ("(1 > 2) == false;", true),
+            ("5 + 10 > 4 + 5;", true),
+            ("5 + 10 < 4 + 5;", false),
         ];
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program);
+            let results = eval_program(&program).unwrap();
             assert_eq!(results.inspect(), expected.to_string());
         }
     }
@@ -269,7 +271,7 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program);
+            let results = eval_program(&program).unwrap();
             assert_eq!(results.inspect(), expected.to_string());
         }
     }

@@ -28,12 +28,20 @@ fn main() {
             break;
         }
 
-        match parse_program(trimmed_input) {
-            Ok(parsed_program) => {
-                println!("{:?}", parsed_program);
+        let program = parse_program(trimmed_input);
+
+        match program {
+            Ok(program) => {
+                let results = evaluator::eval_program(&program);
+
+                match results {
+                    Ok(obj) => println!("{}", obj.inspect()),
+                    Err(e) => println!("Error: {}", e),
+                }
             }
-            Err(err) => {
-                println!("Error: {:?}", err);
+            Err(e) => {
+                println!("Error: {}", e);
+                continue;
             }
         }
     }
