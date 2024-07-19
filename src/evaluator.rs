@@ -1,5 +1,5 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
-use crate::object::{Boolean, Integer, Null, ObjectRef};
+use crate::object::{Boolean, Integer, Null, ObjectRef, ReturnValue};
 use crate::{box_it, downcast_ref};
 
 pub fn eval_program(program: &Program) -> Result<ObjectRef, String> {
@@ -15,6 +15,9 @@ impl Node for Program {
         let mut result: ObjectRef = box_it!(Null);
         for stmt in &self.statements {
             result = eval(stmt.as_ref());
+            if let Some(return_value) = downcast_ref!(result, ReturnValue) {
+                return return_value.value.clone();
+            }
         }
         result
     }
@@ -31,14 +34,17 @@ impl Node for Stmt {
                 value.eval()
             }
             Stmt::Return { ref return_value } => {
-                println!("Return statement: {:?}", return_value);
-                return_value.eval()
+                let value = eval(return_value.as_ref());
+                box_it!(ReturnValue { value })
             }
             Stmt::Expr { ref expression } => eval(expression.as_ref()),
             Stmt::Block { ref statements } => {
                 let mut result: ObjectRef = box_it!(Null);
                 for stmt in statements {
                     result = eval(stmt.as_ref());
+                    if let Some(_) = downcast_ref!(result, ReturnValue) {
+                        return result;
+                    }
                 }
                 result
             }
@@ -312,6 +318,36 @@ mod tests {
                 },
                 Err(e) => panic!("Error: {}", e),
             }
+        }
+    }
+
+    #[test]
+    fn test_eval_return_statement() {
+        let tests = vec![
+            ("return 10;", 10),
+            ("return 10; 9;", 10),
+            ("return 2 * 5; 9;", 10),
+            ("9; return 2 * 5; 9;", 10),
+            (
+                "if (10 > 1) {
+                    if (10 > 1) {
+                        return 10;
+                    };
+                    return 1;
+                };",
+                10,
+            ),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let results = eval_program(&program).unwrap();
+            assert_is_integer(&results, expected);
+            // if let Some(return_value) = downcast_ref!(results, ReturnValue) {
+            //     assert_eq!(return_value.value.inspect(), expected.to_string());
+            // } else {
+            //     panic!("Expected ReturnValue object");
+            // }
         }
     }
 }

@@ -1,9 +1,29 @@
 use std::any::Any;
+
 #[allow(dead_code)]
-pub trait Object {
+pub trait Object: ObjectClone {
     fn as_any(&self) -> &dyn Any;
     fn object_type(&self) -> ObjectType;
     fn inspect(&self) -> String;
+}
+
+pub trait ObjectClone {
+    fn clone_box(&self) -> ObjectRef;
+}
+
+impl<T> ObjectClone for T
+where
+    T: 'static + Object + Clone,
+{
+    fn clone_box(&self) -> ObjectRef {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for ObjectRef {
+    fn clone(&self) -> ObjectRef {
+        self.clone_box()
+    }
 }
 
 pub type ObjectRef = Box<dyn Object>;
@@ -11,7 +31,7 @@ pub type ObjectRef = Box<dyn Object>;
 const INTEGER_OBJ: &str = "INTEGER";
 const NULL_OBJ: &str = "NULL";
 const BOOLEAN_OBJ: &str = "BOOLEAN";
-// const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
+const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 // const ERROR_OBJ: &str = "ERROR";
 // const FUNCTION_OBJ: &str = "FUNCTION";
 // const STRING_OBJ: &str = "STRING";
@@ -24,7 +44,7 @@ pub enum ObjectType {
     Integer,
     Null,
     Boolean,
-    // ReturnValue,
+    ReturnValue,
     // Error,
     // Function,
     // String,
@@ -40,7 +60,7 @@ impl ObjectType {
             ObjectType::Integer => INTEGER_OBJ,
             ObjectType::Null => NULL_OBJ,
             ObjectType::Boolean => BOOLEAN_OBJ,
-            // ObjectType::ReturnValue => RETURN_VALUE_OBJ,
+            ObjectType::ReturnValue => RETURN_VALUE_OBJ,
             // ObjectType::Error => ERROR_OBJ,
             // ObjectType::Function => FUNCTION_OBJ,
             // ObjectType::String => STRING_OBJ,
@@ -51,6 +71,7 @@ impl ObjectType {
     }
 }
 
+#[derive(Clone)]
 pub struct Integer {
     pub value: i64,
 }
@@ -68,6 +89,7 @@ impl Object for Integer {
     }
 }
 
+#[derive(Clone)]
 pub struct Null;
 
 impl Object for Null {
@@ -83,6 +105,7 @@ impl Object for Null {
     }
 }
 
+#[derive(Clone)]
 pub struct Boolean {
     pub value: bool,
 }
@@ -97,5 +120,23 @@ impl Object for Boolean {
 
     fn inspect(&self) -> String {
         self.value.to_string()
+    }
+}
+
+#[derive(Clone)]
+pub struct ReturnValue {
+    pub value: ObjectRef,
+}
+
+impl Object for ReturnValue {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::ReturnValue
+    }
+
+    fn inspect(&self) -> String {
+        self.value.inspect()
     }
 }
