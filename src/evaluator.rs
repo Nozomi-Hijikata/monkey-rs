@@ -1,9 +1,14 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
-use crate::object::{Boolean, Integer, Null, ObjectRef, ReturnValue};
+use crate::object::{Boolean, Error, Integer, Null, ObjectRef, ReturnValue};
 use crate::{box_it, downcast_ref};
+use std::fmt;
 
 pub fn eval_program(program: &Program) -> Result<ObjectRef, String> {
     Ok(program.eval())
+}
+
+fn is_error(object: &ObjectRef) -> bool {
+    downcast_ref!(object, Error).is_some()
 }
 
 fn eval(node: &dyn Node) -> ObjectRef {
@@ -17,6 +22,10 @@ impl Node for Program {
             result = eval(stmt.as_ref());
             if let Some(return_value) = downcast_ref!(result, ReturnValue) {
                 return return_value.value.clone();
+            }
+
+            if let Some(_) = downcast_ref!(result, Error) {
+                return result;
             }
         }
         result
@@ -35,6 +44,9 @@ impl Node for Stmt {
             }
             Stmt::Return { ref return_value } => {
                 let value = eval(return_value.as_ref());
+                if is_error(&value) {
+                    return value;
+                }
                 box_it!(ReturnValue { value })
             }
             Stmt::Expr { ref expression } => eval(expression.as_ref()),
@@ -43,6 +55,8 @@ impl Node for Stmt {
                 for stmt in statements {
                     result = eval(stmt.as_ref());
                     if let Some(_) = downcast_ref!(result, ReturnValue) {
+                        return result;
+                    } else if let Some(_) = downcast_ref!(result, Error) {
                         return result;
                     }
                 }
@@ -67,7 +81,13 @@ impl Node for Expr {
                 ref right,
             } => {
                 let left_value = eval(left.as_ref());
+                if is_error(&left_value) {
+                    return left_value;
+                }
                 let right_value = eval(right.as_ref());
+                if is_error(&right_value) {
+                    return right_value;
+                }
                 eval_infix_expression(operator, &left_value, &right_value)
             }
             Expr::PrefixOp {
@@ -75,6 +95,9 @@ impl Node for Expr {
                 ref right,
             } => {
                 let right_value = eval(right.as_ref());
+                if is_error(&right_value) {
+                    return right_value;
+                }
                 eval_prefix_expression(operator, &right_value)
             }
             Expr::If {
@@ -111,6 +134,14 @@ impl Node for Expr {
 }
 
 fn eval_infix_expression(operator: &Opcode, left: &ObjectRef, right: &ObjectRef) -> ObjectRef {
+    if left.object_type() != right.object_type() {
+        return new_error(format_args!(
+            "type mismatch: {} {} {}",
+            left.object_type().as_str(),
+            operator.as_str(),
+            right.object_type().as_str()
+        ));
+    }
     if let (Some(left_int), Some(right_int)) =
         (downcast_ref!(left, Integer), downcast_ref!(right, Integer))
     {
@@ -118,7 +149,12 @@ fn eval_infix_expression(operator: &Opcode, left: &ObjectRef, right: &ObjectRef)
     } else {
         match operator {
             Opcode::Eq | Opcode::NotEq => eval_boolean_infix_expression(operator, left, right),
-            _ => box_it!(Null),
+            _ => new_error(format_args!(
+                "unknown operator: {} {} {}",
+                left.object_type().as_str(),
+                operator.as_str(),
+                right.object_type().as_str()
+            )),
         }
     }
 }
@@ -141,7 +177,10 @@ fn eval_integer_infix_expression(operator: &Opcode, left: &Integer, right: &Inte
         Opcode::NotEq => eval_native_boolean(&(left.value != right.value)),
         Opcode::Lt => eval_native_boolean(&(left.value < right.value)),
         Opcode::Gt => eval_native_boolean(&(left.value > right.value)),
-        _ => box_it!(Null),
+        _ => new_error(format_args!(
+            "unknown operator: INTEGER {} INTEGER",
+            operator.as_str()
+        )),
     }
 }
 
@@ -156,10 +195,18 @@ fn eval_boolean_infix_expression(
         match operator {
             Opcode::Eq => eval_native_boolean(&(left_bool.value == right_bool.value)),
             Opcode::NotEq => eval_native_boolean(&(left_bool.value != right_bool.value)),
-            _ => box_it!(Null),
+            _ => new_error(format_args!(
+                "unknown operator: BOOLEAN {} BOOLEAN",
+                operator.as_str()
+            )),
         }
     } else {
-        box_it!(Null)
+        new_error(format_args!(
+            "unknown operator: {} {} {}",
+            left.object_type().as_str(),
+            operator.as_str(),
+            right.object_type().as_str()
+        ))
     }
 }
 
@@ -170,9 +217,16 @@ fn eval_prefix_expression(operator: &Opcode, right: &ObjectRef) -> ObjectRef {
             Some(integer) => box_it!(Integer {
                 value: -integer.value,
             }),
-            _ => box_it!(Null),
+            _ => new_error(format_args!(
+                "unknown operator: -{}",
+                right.object_type().as_str()
+            )),
         },
-        _ => box_it!(Null),
+        _ => new_error(format_args!(
+            "unknown operator: {}{}",
+            operator.as_str(),
+            right.object_type().as_str()
+        )),
     }
 }
 
@@ -206,6 +260,11 @@ fn eval_native_boolean(input: &bool) -> ObjectRef {
     } else {
         box_it!(Boolean { value: false })
     }
+}
+
+fn new_error(args: fmt::Arguments) -> ObjectRef {
+    let message = format!("{}", args);
+    box_it!(Error { message })
 }
 
 #[cfg(test)]
@@ -343,11 +402,48 @@ mod tests {
             let program = parse_program(input).unwrap();
             let results = eval_program(&program).unwrap();
             assert_is_integer(&results, expected);
-            // if let Some(return_value) = downcast_ref!(results, ReturnValue) {
-            //     assert_eq!(return_value.value.inspect(), expected.to_string());
-            // } else {
-            //     panic!("Expected ReturnValue object");
-            // }
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = vec![
+            ("5 + true;", "type mismatch: INTEGER + BOOLEAN"),
+            ("5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"),
+            ("-true;", "unknown operator: -BOOLEAN"),
+            ("true + false;", "unknown operator: BOOLEAN + BOOLEAN"),
+            ("5; true + false; 5;", "unknown operator: BOOLEAN + BOOLEAN"),
+            (
+                "if (10 > 1) { true + false; };",
+                "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            (
+                "
+                if (10 > 1) {
+                    if (10 > 1) {
+                        return true + false;
+                    };
+                    return 1;
+                };
+                ",
+                "unknown operator: BOOLEAN + BOOLEAN",
+            ),
+            // ("foobar", "identifier not found: foobar"),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let results = eval_program(&program);
+            match results {
+                Ok(result) => {
+                    if let Some(_) = downcast_ref!(result, Error) {
+                        assert_eq!(result.inspect(), expected);
+                    } else {
+                        panic!("Expected error object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
         }
     }
 }

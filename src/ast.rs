@@ -165,3 +165,20 @@ impl Debug for Opcode {
         }
     }
 }
+
+impl Opcode {
+    pub fn as_str(&self) -> &str {
+        use self::Opcode::*;
+        match *self {
+            Mul => "*",
+            Div => "/",
+            Add => "+",
+            Sub => "-",
+            Bang => "!",
+            Eq => "==",
+            NotEq => "!=",
+            Lt => "<",
+            Gt => ">",
+        }
+    }
+}

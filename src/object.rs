@@ -32,7 +32,7 @@ const INTEGER_OBJ: &str = "INTEGER";
 const NULL_OBJ: &str = "NULL";
 const BOOLEAN_OBJ: &str = "BOOLEAN";
 const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
-// const ERROR_OBJ: &str = "ERROR";
+const ERROR_OBJ: &str = "ERROR";
 // const FUNCTION_OBJ: &str = "FUNCTION";
 // const STRING_OBJ: &str = "STRING";
 // const ARRAY_OBJ: &str = "ARRAY";
@@ -45,7 +45,7 @@ pub enum ObjectType {
     Null,
     Boolean,
     ReturnValue,
-    // Error,
+    Error,
     // Function,
     // String,
     // Array,
@@ -61,7 +61,7 @@ impl ObjectType {
             ObjectType::Null => NULL_OBJ,
             ObjectType::Boolean => BOOLEAN_OBJ,
             ObjectType::ReturnValue => RETURN_VALUE_OBJ,
-            // ObjectType::Error => ERROR_OBJ,
+            ObjectType::Error => ERROR_OBJ,
             // ObjectType::Function => FUNCTION_OBJ,
             // ObjectType::String => STRING_OBJ,
             // ObjectType::Array => ARRAY_OBJ,
@@ -138,5 +138,23 @@ impl Object for ReturnValue {
 
     fn inspect(&self) -> String {
         self.value.inspect()
+    }
+}
+
+#[derive(Clone)]
+pub struct Error {
+    pub message: String,
+}
+
+impl Object for Error {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Error
+    }
+
+    fn inspect(&self) -> String {
+        format!("{}", self.message)
     }
 }
