@@ -34,9 +34,8 @@ impl Node for Stmt {
                 println!("Return statement: {:?}", return_value);
                 return_value.eval()
             }
-            Stmt::Expr { ref expression } => expression.eval(),
+            Stmt::Expr { ref expression } => eval(expression.as_ref()),
             Stmt::Block { ref statements } => {
-                println!("Block statement: {:?}", statements);
                 let mut result: ObjectRef = box_it!(Null);
                 for stmt in statements {
                     result = eval(stmt.as_ref());
@@ -77,11 +76,15 @@ impl Node for Expr {
                 ref consequence,
                 ref alternative,
             } => {
-                println!(
-                    "If expression: {:?} {:?} {:?}",
-                    condition, consequence, alternative
-                );
-                box_it!(Null)
+                let condition_value = eval(condition.as_ref());
+                if is_truthy(&condition_value) {
+                    eval(consequence.as_ref())
+                } else {
+                    match alternative {
+                        Some(alt) => eval(alt.as_ref()),
+                        None => box_it!(Null),
+                    }
+                }
             }
             Expr::FuncLit {
                 ref parameters,
@@ -180,6 +183,16 @@ fn eval_bang_operator_expression(right: &ObjectRef) -> ObjectRef {
     }
 }
 
+fn is_truthy(object: &ObjectRef) -> bool {
+    if let Some(boolean) = downcast_ref!(object, Boolean) {
+        return boolean.value;
+    }
+    match downcast_ref!(object, Null) {
+        Some(_) => false,
+        _ => true,
+    }
+}
+
 // TODO: TRUE, FALSE, NULLは使い回しできるようにする
 fn eval_native_boolean(input: &bool) -> ObjectRef {
     if *input {
@@ -273,6 +286,32 @@ mod tests {
             let program = parse_program(input).unwrap();
             let results = eval_program(&program).unwrap();
             assert_eq!(results.inspect(), expected.to_string());
+        }
+    }
+
+    #[test]
+    fn test_eval_if_expression() {
+        let tests = vec![
+            ("if(true) {1;};", Some(1)),
+            ("if (true) { 1; } else { 2; };", Some(1)),
+            ("if (false) { 10; };", None),
+            ("if (1) { 10; };", Some(10)),
+            ("if (1 < 2) { 10; };", Some(10)),
+            ("if (1 > 2) { 10; };", None),
+            ("if (1 > 2) { 10; } else { 20; };", Some(20)),
+            ("if (1 < 2) { 10; } else { 20; };", Some(10)),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let results = eval_program(&program);
+            match results {
+                Ok(result) => match expected {
+                    Some(value) => assert_is_integer(&result, value),
+                    None => assert_eq!(result.inspect(), "null"),
+                },
+                Err(e) => panic!("Error: {}", e),
+            }
         }
     }
 }

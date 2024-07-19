@@ -435,5 +435,13 @@ mod tests {
             format!("{:?}", program.statements),
             "[1, return 2, let a = 3, 4]"
         );
+
+        let program = grammar::ProgramParser::new()
+            .parse("if (1 < 2) { 10; } else { 20; };")
+            .unwrap();
+        assert_eq!(
+            format!("{:?}", program.statements),
+            "[if ((1 < 2)) {\n  10\n} else {\n  20\n}]"
+        );
     }
 }
