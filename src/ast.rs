@@ -1,8 +1,8 @@
-use crate::object::Object;
+use crate::{environment::Environment, object::Object};
 use std::fmt::{Debug, Error, Formatter};
 
 pub trait Node {
-    fn eval(&self) -> Box<dyn Object>;
+    fn eval(&self, env: &mut Environment) -> Box<dyn Object>;
 }
 
 #[derive(Debug)]

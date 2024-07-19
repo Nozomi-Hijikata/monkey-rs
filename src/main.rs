@@ -1,4 +1,5 @@
 mod ast;
+mod environment;
 mod evaluator;
 mod object;
 mod parser;
@@ -12,6 +13,7 @@ fn main() {
     println!("Type 'exit' to exit.");
 
     let mut input = String::new();
+    let mut env = environment::Environment::new();
 
     loop {
         print!("> ");
@@ -32,7 +34,7 @@ fn main() {
 
         match program {
             Ok(program) => {
-                let results = evaluator::eval_program(&program);
+                let results = evaluator::eval_program(&program, &mut env);
 
                 match results {
                     Ok(obj) => println!("{}", obj.inspect()),

@@ -1,25 +1,26 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
+use crate::environment::Environment;
 use crate::object::{Boolean, Error, Integer, Null, ObjectRef, ReturnValue};
 use crate::{box_it, downcast_ref};
 use std::fmt;
 
-pub fn eval_program(program: &Program) -> Result<ObjectRef, String> {
-    Ok(program.eval())
+pub fn eval_program(program: &Program, env: &mut Environment) -> Result<ObjectRef, String> {
+    Ok(program.eval(env))
 }
 
 fn is_error(object: &ObjectRef) -> bool {
     downcast_ref!(object, Error).is_some()
 }
 
-fn eval(node: &dyn Node) -> ObjectRef {
-    node.eval()
+fn eval(node: &dyn Node, env: &mut Environment) -> ObjectRef {
+    node.eval(env)
 }
 
 impl Node for Program {
-    fn eval(&self) -> ObjectRef {
+    fn eval(&self, env: &mut Environment) -> ObjectRef {
         let mut result: ObjectRef = box_it!(Null);
         for stmt in &self.statements {
-            result = eval(stmt.as_ref());
+            result = eval(stmt.as_ref(), env);
             if let Some(return_value) = downcast_ref!(result, ReturnValue) {
                 return return_value.value.clone();
             }
@@ -33,27 +34,30 @@ impl Node for Program {
 }
 
 impl Node for Stmt {
-    fn eval(&self) -> ObjectRef {
+    fn eval(&self, env: &mut Environment) -> ObjectRef {
         match self {
             Stmt::Let {
                 ref name,
                 ref value,
             } => {
-                println!("Let statement: {} = {:?}", name, value);
-                value.eval()
+                let value = eval(value.as_ref(), env);
+                if is_error(&value) {
+                    return value;
+                }
+                env.set(name.clone(), value)
             }
             Stmt::Return { ref return_value } => {
-                let value = eval(return_value.as_ref());
+                let value = eval(return_value.as_ref(), env);
                 if is_error(&value) {
                     return value;
                 }
                 box_it!(ReturnValue { value })
             }
-            Stmt::Expr { ref expression } => eval(expression.as_ref()),
+            Stmt::Expr { ref expression } => eval(expression.as_ref(), env),
             Stmt::Block { ref statements } => {
                 let mut result: ObjectRef = box_it!(Null);
                 for stmt in statements {
-                    result = eval(stmt.as_ref());
+                    result = eval(stmt.as_ref(), env);
                     if let Some(_) = downcast_ref!(result, ReturnValue) {
                         return result;
                     } else if let Some(_) = downcast_ref!(result, Error) {
@@ -67,12 +71,15 @@ impl Node for Stmt {
 }
 
 impl Node for Expr {
-    fn eval(&self) -> ObjectRef {
+    fn eval(&self, env: &mut Environment) -> ObjectRef {
         match self {
             Expr::Number(n) => box_it!(Integer { value: *n }),
             Expr::Identifier(ident) => {
-                println!("Identifier expression: {}", ident);
-                box_it!(Null)
+                let value = eval_identifier_expression(ident, env);
+                if is_error(&value) {
+                    return value;
+                }
+                value
             }
             Expr::Boolean(b) => eval_native_boolean(b),
             Expr::InfixOp {
@@ -80,11 +87,11 @@ impl Node for Expr {
                 ref operator,
                 ref right,
             } => {
-                let left_value = eval(left.as_ref());
+                let left_value = eval(left.as_ref(), env);
                 if is_error(&left_value) {
                     return left_value;
                 }
-                let right_value = eval(right.as_ref());
+                let right_value = eval(right.as_ref(), env);
                 if is_error(&right_value) {
                     return right_value;
                 }
@@ -94,7 +101,7 @@ impl Node for Expr {
                 ref operator,
                 ref right,
             } => {
-                let right_value = eval(right.as_ref());
+                let right_value = eval(right.as_ref(), env);
                 if is_error(&right_value) {
                     return right_value;
                 }
@@ -105,12 +112,12 @@ impl Node for Expr {
                 ref consequence,
                 ref alternative,
             } => {
-                let condition_value = eval(condition.as_ref());
+                let condition_value = eval(condition.as_ref(), env);
                 if is_truthy(&condition_value) {
-                    eval(consequence.as_ref())
+                    eval(consequence.as_ref(), env)
                 } else {
                     match alternative {
-                        Some(alt) => eval(alt.as_ref()),
+                        Some(alt) => eval(alt.as_ref(), env),
                         None => box_it!(Null),
                     }
                 }
@@ -243,6 +250,13 @@ fn eval_bang_operator_expression(right: &ObjectRef) -> ObjectRef {
     }
 }
 
+fn eval_identifier_expression(name: &str, env: &Environment) -> ObjectRef {
+    match env.get(name) {
+        Some(value) => value,
+        None => new_error(format_args!("identifier not found: {}", name)),
+    }
+}
+
 fn is_truthy(object: &ObjectRef) -> bool {
     if let Some(boolean) = downcast_ref!(object, Boolean) {
         return boolean.value;
@@ -298,7 +312,8 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
             assert_is_integer(&results, expected);
         }
     }
@@ -331,7 +346,8 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
             assert_eq!(results.inspect(), expected.to_string());
         }
     }
@@ -349,7 +365,8 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
             assert_eq!(results.inspect(), expected.to_string());
         }
     }
@@ -369,7 +386,8 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program);
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
             match results {
                 Ok(result) => match expected {
                     Some(value) => assert_is_integer(&result, value),
@@ -400,7 +418,8 @@ mod tests {
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
             assert_is_integer(&results, expected);
         }
     }
@@ -428,12 +447,13 @@ mod tests {
                 ",
                 "unknown operator: BOOLEAN + BOOLEAN",
             ),
-            // ("foobar", "identifier not found: foobar"),
+            ("foobar;", "identifier not found: foobar"),
         ];
 
         for (input, expected) in tests {
             let program = parse_program(input).unwrap();
-            let results = eval_program(&program);
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
             match results {
                 Ok(result) => {
                     if let Some(_) = downcast_ref!(result, Error) {
@@ -444,6 +464,23 @@ mod tests {
                 }
                 Err(e) => panic!("Error: {}", e),
             }
+        }
+    }
+
+    #[test]
+    fn test_let_statement() {
+        let tests = vec![
+            ("let a = 5; a;", 5),
+            ("let a = 5 * 5; a;", 25),
+            ("let a = 5; let b = a; b;", 5),
+            ("let a = 5; let b = a; let c = a + b + 5; c;", 15),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
+            assert_is_integer(&results, expected);
         }
     }
 }
