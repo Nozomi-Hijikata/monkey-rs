@@ -10,6 +10,7 @@ pub struct Program {
     pub statements: Vec<Box<Stmt>>,
 }
 
+#[derive(Clone)]
 pub enum Stmt {
     Let { name: String, value: Box<Expr> },
     Return { return_value: Box<Expr> },
@@ -17,6 +18,7 @@ pub enum Stmt {
     Block { statements: Vec<Box<Stmt>> },
 }
 
+#[derive(Clone)]
 pub enum Expr {
     Number(i64),
     Identifier(String),
@@ -180,5 +182,11 @@ impl Opcode {
             Lt => "<",
             Gt => ">",
         }
+    }
+}
+
+impl ToString for Stmt {
+    fn to_string(&self) -> String {
+        format!("{:?}", self)
     }
 }

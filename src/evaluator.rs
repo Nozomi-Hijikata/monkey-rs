@@ -1,6 +1,6 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::environment::Environment;
-use crate::object::{Boolean, Error, Integer, Null, ObjectRef, ReturnValue};
+use crate::object::{Boolean, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue};
 use crate::{box_it, downcast_ref};
 use std::fmt;
 
@@ -126,8 +126,11 @@ impl Node for Expr {
                 ref parameters,
                 ref body,
             } => {
-                println!("Function literal expression: {:?} {:?}", parameters, body);
-                box_it!(Null)
+                box_it!(Function {
+                    parameters: parameters.clone(),
+                    body: body.clone(),
+                    env: env.clone(),
+                })
             }
             Expr::Call {
                 ref function,
@@ -284,7 +287,7 @@ fn new_error(args: fmt::Arguments) -> ObjectRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_program;
+    use crate::{object::Function, parser::parse_program};
 
     fn assert_is_integer(object: &ObjectRef, expected_value: i64) {
         if let Some(integer) = downcast_ref!(object, Integer) {
@@ -481,6 +484,21 @@ mod tests {
             let mut env = Environment::new();
             let results = eval_program(&program, &mut env).unwrap();
             assert_is_integer(&results, expected);
+        }
+    }
+
+    #[test]
+    fn test_function_object() {
+        let input = "fn(x) { x + 2; };";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(function) = downcast_ref!(&results, Function) {
+            assert_eq!(function.inspect(), "fn(x) {\n (x + 2);\n}");
+            assert_eq!(function.object_type().as_str(), "FUNCTION");
+            assert_eq!(function.parameters.len(), 1);
+        } else {
+            panic!("Expected Function object");
         }
     }
 }

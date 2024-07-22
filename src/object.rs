@@ -1,3 +1,5 @@
+use crate::ast::Expr;
+use crate::{ast::Stmt, environment::Environment};
 use std::any::Any;
 
 #[allow(dead_code)]
@@ -33,7 +35,7 @@ const NULL_OBJ: &str = "NULL";
 const BOOLEAN_OBJ: &str = "BOOLEAN";
 const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 const ERROR_OBJ: &str = "ERROR";
-// const FUNCTION_OBJ: &str = "FUNCTION";
+const FUNCTION_OBJ: &str = "FUNCTION";
 // const STRING_OBJ: &str = "STRING";
 // const ARRAY_OBJ: &str = "ARRAY";
 // const BUILTIN_OBJ: &str = "BUILTIN";
@@ -46,7 +48,7 @@ pub enum ObjectType {
     Boolean,
     ReturnValue,
     Error,
-    // Function,
+    Function,
     // String,
     // Array,
     // Builtin,
@@ -62,7 +64,7 @@ impl ObjectType {
             ObjectType::Boolean => BOOLEAN_OBJ,
             ObjectType::ReturnValue => RETURN_VALUE_OBJ,
             ObjectType::Error => ERROR_OBJ,
-            // ObjectType::Function => FUNCTION_OBJ,
+            ObjectType::Function => FUNCTION_OBJ,
             // ObjectType::String => STRING_OBJ,
             // ObjectType::Array => ARRAY_OBJ,
             // ObjectType::Builtin => BUILTIN_OBJ,
@@ -156,5 +158,29 @@ impl Object for Error {
 
     fn inspect(&self) -> String {
         format!("{}", self.message)
+    }
+}
+
+#[derive(Clone)]
+pub struct Function {
+    pub parameters: Vec<Box<Expr>>,
+    pub body: Box<Stmt>,
+    pub env: Environment,
+}
+
+impl Object for Function {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Function
+    }
+
+    fn inspect(&self) -> String {
+        let mut params = Vec::new();
+        for p in &self.parameters {
+            params.push(format!("{:?}", p));
+        }
+        format!("fn({}) {:?}", params.join(", "), self.body)
     }
 }
