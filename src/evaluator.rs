@@ -136,7 +136,10 @@ impl Node for Expr {
                 ref function,
                 ref arguments,
             } => {
-                println!("Call expression: {:?} {:?}", function, arguments);
+                let function = eval(function.as_ref(), env);
+                if is_error(&function) {
+                    return function;
+                }
                 box_it!(Null)
             }
         }
@@ -494,11 +497,30 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         if let Some(function) = downcast_ref!(&results, Function) {
-            assert_eq!(function.inspect(), "fn(x) {\n (x + 2);\n}");
+            assert_eq!(function.inspect(), "fn(x) {\n  (x + 2)\n}");
             assert_eq!(function.object_type().as_str(), "FUNCTION");
             assert_eq!(function.parameters.len(), 1);
         } else {
             panic!("Expected Function object");
+        }
+    }
+
+    // #[test]
+    fn test_function_application() {
+        let tests = vec![
+            ("let identity = fn(x) { x; }; identity(5);", 5),
+            ("let identity = fn(x) { return x; }; identity(5);", 5),
+            ("let double = fn(x) { x * 2; }; double(5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+            ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+            ("fn(x) { x; }(5);", 5),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
+            assert_is_integer(&results, expected);
         }
     }
 }

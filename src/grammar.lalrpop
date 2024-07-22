@@ -40,7 +40,7 @@ BlockStmt: Box<Stmt> = {
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
   #[precedence(level="0")]
-  Term,
+  TermExpr,
   CallExpr, // 関数呼び出しは優先度が高い
   // 同じ優先度の場合は左結合
   #[precedence(level="1")] #[assoc(side="left")] // 1: 乗算除算
@@ -56,6 +56,10 @@ pub Expr: Box<Expr> = {
   FuncLit,
 };
 
+IdentExpr: Box<Expr> = {
+    Identifier => Box::new(Expr::Identifier(<>)),
+}
+
 IfExpr: Box<Expr> = {
     "if" "(" <condition:Expr> ")" <consequence:BlockStmt> "else" <alternative:BlockStmt>
       => Box::new(Expr::If { condition: condition, consequence: consequence, alternative: Some(alternative) }),
@@ -70,16 +74,17 @@ FuncLit: Box<Expr> = {
 Params: Vec<Box<Expr>> = Comma<Expr>;
 
 CallExpr: Box<Expr> = {
-    <function:Identifier> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
+    <function:IdentExpr> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
+    <function: FuncLit> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
 };
 
 Arguments: Vec<Box<Expr>> = Comma<Expr>;
 
-Term: Box<Expr> = {
+TermExpr: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
-    Identifier => Box::new(Expr::Identifier(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
-    <operator:PrefixOp> <right:Term> => Box::new(Expr::PrefixOp{ <> }),
+    IdentExpr,
+    <operator:PrefixOp> <right:TermExpr> => Box::new(Expr::PrefixOp{ <> }),
     "(" <Expr> ")",
 };
 

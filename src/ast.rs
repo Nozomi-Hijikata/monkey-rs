@@ -42,7 +42,7 @@ pub enum Expr {
         body: Box<Stmt>,
     },
     Call {
-        function: String,
+        function: Box<Expr>,
         arguments: Vec<Box<Expr>>,
     },
     // TODO:
@@ -137,7 +137,7 @@ impl Debug for Expr {
                 ref arguments,
             } => {
                 let mut s = String::new();
-                s.push_str(&format!("{}(", function));
+                s.push_str(&format!("{:?}(", function));
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         s.push_str(", ");
