@@ -140,7 +140,11 @@ impl Node for Expr {
                 if is_error(&function) {
                     return function;
                 }
-                box_it!(Null)
+                let args = eval_expressions(arguments, env);
+                if args.len() == 1 && is_error(&args[0]) {
+                    return args[0].clone();
+                }
+                apply_function(downcast_ref!(function, Function).unwrap(), args.as_slice())
             }
         }
     }
@@ -285,6 +289,34 @@ fn eval_native_boolean(input: &bool) -> ObjectRef {
 fn new_error(args: fmt::Arguments) -> ObjectRef {
     let message = format!("{}", args);
     box_it!(Error { message })
+}
+
+fn eval_expressions(expressions: &[Box<Expr>], env: &mut Environment) -> Vec<ObjectRef> {
+    let mut result = Vec::new();
+    for expr in expressions {
+        let evaluated = eval(expr.as_ref(), env);
+        if is_error(&evaluated) {
+            return vec![evaluated];
+        }
+        result.push(evaluated);
+    }
+    result
+}
+
+fn apply_function(function: &Function, args: &[ObjectRef]) -> ObjectRef {
+    let mut extended_env = Environment::new_enclosed(&function.env);
+    for (param, arg) in function.parameters.iter().zip(args.iter()) {
+        if let Expr::Identifier(name) = param.as_ref() {
+            extended_env.set(name.clone(), arg.clone());
+        } else {
+            return new_error(format_args!("invalid parameter: {:?}", param));
+        }
+    }
+    let evaluated = eval(function.body.as_ref(), &mut extended_env);
+    if let Some(return_value) = downcast_ref!(evaluated, ReturnValue) {
+        return return_value.value.clone();
+    }
+    evaluated
 }
 
 #[cfg(test)]
@@ -505,7 +537,7 @@ mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     fn test_function_application() {
         let tests = vec![
             ("let identity = fn(x) { x; }; identity(5);", 5),
@@ -522,5 +554,20 @@ mod tests {
             let results = eval_program(&program, &mut env).unwrap();
             assert_is_integer(&results, expected);
         }
+    }
+
+    #[test]
+    fn test_closures() {
+        let input = "
+        let newAdder = fn(x) {
+            fn(y) { x + y; };
+        };
+        let addTwo = newAdder(2);
+        addTwo(3);
+        ";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        assert_is_integer(&results, 5);
     }
 }

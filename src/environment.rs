@@ -26,9 +26,10 @@ impl Environment {
     }
 
     pub fn get(&self, name: &str) -> Option<ObjectRef> {
-        self.store.get(name).cloned().or_else(|| {
-            self.outer.as_ref().and_then(|outer| outer.get(name))
-        })
+        self.store
+            .get(name)
+            .cloned()
+            .or_else(|| self.outer.as_ref().and_then(|outer| outer.get(name)))
     }
 
     pub fn set(&mut self, name: String, value: ObjectRef) -> ObjectRef {
