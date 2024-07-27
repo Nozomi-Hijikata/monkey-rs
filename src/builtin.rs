@@ -1,5 +1,5 @@
 use crate::evaluator::new_error;
-use crate::object::{Builtin, Integer, Object, ObjectRef, StringObj};
+use crate::object::{Builtin, Integer, ObjectRef, StringObj};
 use crate::{box_it, downcast_ref};
 use lazy_static::lazy_static;
 use std::collections::HashMap;

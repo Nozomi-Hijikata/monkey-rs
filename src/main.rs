@@ -43,7 +43,7 @@ fn main() {
                 }
             }
             Err(e) => {
-                println!("Error: {}", e);
+                println!("Parse Error: {}", e);
                 continue;
             }
         }

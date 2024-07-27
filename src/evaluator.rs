@@ -2,7 +2,7 @@ use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::builtin::get_builtin;
 use crate::environment::Environment;
 use crate::object::{
-    Boolean, Builtin, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue, StringObj,
+    Boolean, Builtin, Error, Function, Integer, Null, ObjectRef, ReturnValue, StringObj,
 };
 use crate::{box_it, downcast_ref};
 use std::fmt;
@@ -369,7 +369,7 @@ fn apply_function(function: ObjectRef, args: &[ObjectRef]) -> ObjectRef {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{object::Function, parser::parse_program};
+    use crate::{object::Function, object::Object, parser::parse_program};
 
     fn assert_is_integer(object: &ObjectRef, expected_value: i64) {
         if let Some(integer) = downcast_ref!(object, Integer) {
