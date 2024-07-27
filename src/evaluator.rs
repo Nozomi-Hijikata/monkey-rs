@@ -1,7 +1,8 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
+use crate::builtin::get_builtin;
 use crate::environment::Environment;
 use crate::object::{
-    Boolean, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue, StringObj,
+    Boolean, Builtin, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue, StringObj,
 };
 use crate::{box_it, downcast_ref};
 use std::fmt;
@@ -84,7 +85,11 @@ impl Node for Expr {
                 value
             }
             Expr::Boolean(b) => eval_native_boolean(b),
-            Expr::StringLit(s) => box_it!(StringObj { value: s.clone() }),
+            Expr::StringLit(s) => box_it!(StringObj {
+                // NOTE: Trim the double quotes from the Expr::StringLit. This is because it
+                // contains the double quotes in the AST node value.
+                value: s.trim_matches('"').to_string()
+            }),
             Expr::InfixOp {
                 ref left,
                 ref operator,
@@ -147,7 +152,7 @@ impl Node for Expr {
                 if args.len() == 1 && is_error(&args[0]) {
                     return args[0].clone();
                 }
-                apply_function(downcast_ref!(function, Function).unwrap(), args.as_slice())
+                apply_function(function, args.as_slice())
             }
         }
     }
@@ -242,10 +247,10 @@ fn eval_string_infix_expression(
 ) -> ObjectRef {
     match operator {
         Opcode::Add => {
-            let left_str = left.value.trim_matches('"');
-            let right_str = right.value.trim_matches('"');
+            let left_str = &left.value;
+            let right_str = &right.value;
             box_it!(StringObj {
-                value: format!("\"{}{}\"", left_str, right_str),
+                value: format!("{}{}", left_str, right_str),
             })
         }
         _ => new_error(format_args!(
@@ -289,6 +294,9 @@ fn eval_bang_operator_expression(right: &ObjectRef) -> ObjectRef {
 }
 
 fn eval_identifier_expression(name: &str, env: &Environment) -> ObjectRef {
+    if let Some(builtin) = get_builtin(name) {
+        return box_it!(builtin);
+    }
     match env.get(name) {
         Some(value) => value,
         None => new_error(format_args!("identifier not found: {}", name)),
@@ -314,7 +322,7 @@ fn eval_native_boolean(input: &bool) -> ObjectRef {
     }
 }
 
-fn new_error(args: fmt::Arguments) -> ObjectRef {
+pub fn new_error(args: fmt::Arguments) -> ObjectRef {
     let message = format!("{}", args);
     box_it!(Error { message })
 }
@@ -331,20 +339,31 @@ fn eval_expressions(expressions: &[Box<Expr>], env: &mut Environment) -> Vec<Obj
     result
 }
 
-fn apply_function(function: &Function, args: &[ObjectRef]) -> ObjectRef {
-    let mut extended_env = Environment::new_enclosed(&function.env);
-    for (param, arg) in function.parameters.iter().zip(args.iter()) {
-        if let Expr::Identifier(name) = param.as_ref() {
-            extended_env.set(name.clone(), arg.clone());
-        } else {
-            return new_error(format_args!("invalid parameter: {:?}", param));
+fn apply_function(function: ObjectRef, args: &[ObjectRef]) -> ObjectRef {
+    if let Some(builtin) = downcast_ref!(function, Builtin) {
+        return (builtin.func)(args.to_vec());
+    }
+
+    if let Some(func) = downcast_ref!(function, Function) {
+        let mut extended_env = Environment::new_enclosed(&func.env);
+        for (param, arg) in func.parameters.iter().zip(args.iter()) {
+            if let Expr::Identifier(name) = param.as_ref() {
+                extended_env.set(name.clone(), arg.clone());
+            } else {
+                return new_error(format_args!("invalid parameter: {:?}", param));
+            }
         }
+        let evaluated = eval(func.body.as_ref(), &mut extended_env);
+        if let Some(return_value) = downcast_ref!(evaluated, ReturnValue) {
+            return return_value.value.clone();
+        }
+        return evaluated;
     }
-    let evaluated = eval(function.body.as_ref(), &mut extended_env);
-    if let Some(return_value) = downcast_ref!(evaluated, ReturnValue) {
-        return return_value.value.clone();
-    }
-    evaluated
+
+    new_error(format_args!(
+        "not a function: {:?}",
+        function.object_type().as_str()
+    ))
 }
 
 #[cfg(test)]
@@ -610,7 +629,7 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         if let Some(string) = downcast_ref!(&results, StringObj) {
-            assert_eq!(string.inspect(), "\"Hello, World!\"");
+            assert_eq!(string.inspect(), "Hello, World!");
         } else {
             panic!("Expected String object");
         }
@@ -623,9 +642,61 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         if let Some(string) = downcast_ref!(&results, StringObj) {
-            assert_eq!(string.inspect(), "\"Hello World!\"");
+            assert_eq!(string.inspect(), "Hello World!");
         } else {
             panic!("Expected String object");
+        }
+    }
+
+    #[test]
+    fn test_builtin_functions_with_integer() {
+        let tests = vec![
+            ("len(\"\");", 0),
+            ("len(\"four\");", 4),
+            ("len(\"hello world\");", 11),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
+            match results {
+                Ok(result) => {
+                    if let Some(integer) = downcast_ref!(&result, Integer) {
+                        assert_eq!(integer.value, expected);
+                    } else {
+                        panic!("Expected Integer object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_builtin_functions_with_errors() {
+        let tests = vec![
+            ("len(1);", "argument to `len` not supported, got INTEGER"),
+            (
+                "len(\"one\", \"two\");",
+                "wrong number of arguments. got=2, want=1",
+            ),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
+            match results {
+                Ok(result) => {
+                    if let Some(_) = downcast_ref!(result, Error) {
+                        assert_eq!(result.inspect(), expected);
+                    } else {
+                        panic!("Expected error object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
         }
     }
 }

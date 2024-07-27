@@ -457,6 +457,9 @@ mod tests {
             .parse("\"hello\"; \"world\";")
             .unwrap();
 
-        assert_eq!(format!("{:?}", program.statements), "[\"hello\", \"world\"]");
+        assert_eq!(
+            format!("{:?}", program.statements),
+            "[\"hello\", \"world\"]"
+        );
     }
 }

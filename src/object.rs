@@ -37,8 +37,8 @@ const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 const ERROR_OBJ: &str = "ERROR";
 const FUNCTION_OBJ: &str = "FUNCTION";
 const STRING_OBJ: &str = "STRING";
+const BUILTIN_OBJ: &str = "BUILTIN";
 // const ARRAY_OBJ: &str = "ARRAY";
-// const BUILTIN_OBJ: &str = "BUILTIN";
 // const HASH_OBJ: &str = "HASH";
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -50,8 +50,8 @@ pub enum ObjectType {
     Error,
     Function,
     StringObj,
+    Builtin,
     // Array,
-    // Builtin,
     // Hash,
 }
 
@@ -66,8 +66,8 @@ impl ObjectType {
             ObjectType::Error => ERROR_OBJ,
             ObjectType::Function => FUNCTION_OBJ,
             ObjectType::StringObj => STRING_OBJ,
+            ObjectType::Builtin => BUILTIN_OBJ,
             // ObjectType::Array => ARRAY_OBJ,
-            // ObjectType::Builtin => BUILTIN_OBJ,
             // ObjectType::Hash => HASH_OBJ,
         }
     }
@@ -200,5 +200,23 @@ impl Object for StringObj {
 
     fn inspect(&self) -> String {
         self.value.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct Builtin {
+    pub func: fn(Vec<ObjectRef>) -> ObjectRef,
+}
+
+impl Object for Builtin {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Builtin
+    }
+
+    fn inspect(&self) -> String {
+        "builtin function".to_string()
     }
 }
