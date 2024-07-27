@@ -1,6 +1,8 @@
 use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::environment::Environment;
-use crate::object::{Boolean, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue};
+use crate::object::{
+    Boolean, Error, Function, Integer, Null, Object, ObjectRef, ReturnValue, StringObj,
+};
 use crate::{box_it, downcast_ref};
 use std::fmt;
 
@@ -82,6 +84,7 @@ impl Node for Expr {
                 value
             }
             Expr::Boolean(b) => eval_native_boolean(b),
+            Expr::StringLit(s) => box_it!(StringObj { value: s.clone() }),
             Expr::InfixOp {
                 ref left,
                 ref operator,
@@ -163,6 +166,11 @@ fn eval_infix_expression(operator: &Opcode, left: &ObjectRef, right: &ObjectRef)
         (downcast_ref!(left, Integer), downcast_ref!(right, Integer))
     {
         eval_integer_infix_expression(operator, left_int, right_int)
+    } else if let (Some(left_str), Some(right_str)) = (
+        downcast_ref!(left, StringObj),
+        downcast_ref!(right, StringObj),
+    ) {
+        eval_string_infix_expression(operator, left_str, right_str)
     } else {
         match operator {
             Opcode::Eq | Opcode::NotEq => eval_boolean_infix_expression(operator, left, right),
@@ -224,6 +232,26 @@ fn eval_boolean_infix_expression(
             operator.as_str(),
             right.object_type().as_str()
         ))
+    }
+}
+
+fn eval_string_infix_expression(
+    operator: &Opcode,
+    left: &StringObj,
+    right: &StringObj,
+) -> ObjectRef {
+    match operator {
+        Opcode::Add => {
+            let left_str = left.value.trim_matches('"');
+            let right_str = right.value.trim_matches('"');
+            box_it!(StringObj {
+                value: format!("\"{}{}\"", left_str, right_str),
+            })
+        }
+        _ => new_error(format_args!(
+            "unknown operator: STRING {} STRING",
+            operator.as_str()
+        )),
     }
 }
 
@@ -486,6 +514,10 @@ mod tests {
                 "unknown operator: BOOLEAN + BOOLEAN",
             ),
             ("foobar;", "identifier not found: foobar"),
+            (
+                "\"Hello\" - \"World\";",
+                "unknown operator: STRING - STRING",
+            ),
         ];
 
         for (input, expected) in tests {
@@ -569,5 +601,31 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         assert_is_integer(&results, 5);
+    }
+
+    #[test]
+    fn test_string_literal() {
+        let input = "\"Hello, World!\";";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(string) = downcast_ref!(&results, StringObj) {
+            assert_eq!(string.inspect(), "\"Hello, World!\"");
+        } else {
+            panic!("Expected String object");
+        }
+    }
+
+    #[test]
+    fn test_string_concatenation() {
+        let input = "\"Hello\" + \" \" + \"World!\";";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(string) = downcast_ref!(&results, StringObj) {
+            assert_eq!(string.inspect(), "\"Hello World!\"");
+        } else {
+            panic!("Expected String object");
+        }
     }
 }

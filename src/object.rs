@@ -36,7 +36,7 @@ const BOOLEAN_OBJ: &str = "BOOLEAN";
 const RETURN_VALUE_OBJ: &str = "RETURN_VALUE";
 const ERROR_OBJ: &str = "ERROR";
 const FUNCTION_OBJ: &str = "FUNCTION";
-// const STRING_OBJ: &str = "STRING";
+const STRING_OBJ: &str = "STRING";
 // const ARRAY_OBJ: &str = "ARRAY";
 // const BUILTIN_OBJ: &str = "BUILTIN";
 // const HASH_OBJ: &str = "HASH";
@@ -49,7 +49,7 @@ pub enum ObjectType {
     ReturnValue,
     Error,
     Function,
-    // String,
+    StringObj,
     // Array,
     // Builtin,
     // Hash,
@@ -65,7 +65,7 @@ impl ObjectType {
             ObjectType::ReturnValue => RETURN_VALUE_OBJ,
             ObjectType::Error => ERROR_OBJ,
             ObjectType::Function => FUNCTION_OBJ,
-            // ObjectType::String => STRING_OBJ,
+            ObjectType::StringObj => STRING_OBJ,
             // ObjectType::Array => ARRAY_OBJ,
             // ObjectType::Builtin => BUILTIN_OBJ,
             // ObjectType::Hash => HASH_OBJ,
@@ -182,5 +182,23 @@ impl Object for Function {
             params.push(format!("{:?}", p));
         }
         format!("fn({}) {:?}", params.join(", "), self.body)
+    }
+}
+
+#[derive(Clone)]
+pub struct StringObj {
+    pub value: String,
+}
+
+impl Object for StringObj {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::StringObj
+    }
+
+    fn inspect(&self) -> String {
+        self.value.clone()
     }
 }

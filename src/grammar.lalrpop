@@ -84,6 +84,7 @@ TermExpr: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
     Bool => Box::new(Expr::Boolean(<>)),
     IdentExpr,
+    String => Box::new(Expr::StringLit(<>)),
     <operator:PrefixOp> <right:TermExpr> => Box::new(Expr::PrefixOp{ <> }),
     "(" <Expr> ")",
 };
@@ -114,6 +115,10 @@ Identifier: String = {
 Bool: bool = {
     "true" => true,
     "false" => false
+};
+
+String: String = {
+    r#""[^"]*""# => <>.to_string()
 };
 
 SumOp: Opcode = {

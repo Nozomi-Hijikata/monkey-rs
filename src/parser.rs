@@ -47,6 +47,15 @@ mod tests {
     }
 
     #[test]
+    fn test_string() {
+        let expr = grammar::ExprParser::new().parse("\"hello\"").unwrap();
+        assert_eq!(format!("{:?}", expr), "\"hello\"");
+
+        let expr = grammar::ExprParser::new().parse("\"hello world\"").unwrap();
+        assert_eq!(format!("{:?}", expr), "\"hello world\"");
+    }
+
+    #[test]
     fn test_infix_expr() {
         let expr = grammar::ExprParser::new().parse("1+ 2 * 3").unwrap();
         assert_eq!(format!("{:?}", expr), "(1 + (2 * 3))");
@@ -443,5 +452,11 @@ mod tests {
             format!("{:?}", program.statements),
             "[if ((1 < 2)) {\n  10\n} else {\n  20\n}]"
         );
+
+        let program = grammar::ProgramParser::new()
+            .parse("\"hello\"; \"world\";")
+            .unwrap();
+
+        assert_eq!(format!("{:?}", program.statements), "[\"hello\", \"world\"]");
     }
 }

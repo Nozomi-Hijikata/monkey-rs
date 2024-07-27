@@ -23,6 +23,7 @@ pub enum Expr {
     Number(i64),
     Identifier(String),
     Boolean(bool),
+    StringLit(String),
     InfixOp {
         left: Box<Expr>,
         operator: Opcode,
@@ -46,7 +47,6 @@ pub enum Expr {
         arguments: Vec<Box<Expr>>,
     },
     // TODO:
-    // String literal
     // Array Literal
     // Array Index Expression
     // Hash literal
@@ -94,6 +94,7 @@ impl Debug for Expr {
             Number(n) => write!(fmt, "{:?}", n),
             Identifier(ref s) => write!(fmt, "{}", s),
             Boolean(b) => write!(fmt, "{:?}", b),
+            StringLit(ref s) => write!(fmt, "{}", s),
             InfixOp {
                 ref left,
                 ref operator,
