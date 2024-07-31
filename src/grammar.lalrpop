@@ -41,24 +41,33 @@ BlockStmt: Box<Stmt> = {
 pub Expr: Box<Expr> = {
   #[precedence(level="0")]
   TermExpr,
-  CallExpr, // 関数呼び出しは優先度が高い
+  #[precedence(level="1")] #[assoc(side="left")]
+  IndexExpr,
+  #[precedence(level="2")]
+  CallExpr,
   // 同じ優先度の場合は左結合
-  #[precedence(level="1")] #[assoc(side="left")] // 1: 乗算除算
-  <left:Expr> <operator:ProductOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="2")] #[assoc(side="left")] // 2: 加算減算
-  <left:Expr> <operator:SumOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="3")] #[assoc(side="left")] // 3: 比較演算子
-  <left:Expr> <operator:LessGreaterOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="4")] #[assoc(side="left")] // 4: 等価演算子
-  <left:Expr> <operator:EqualsOp> <right:Expr> => Box::new(Expr::InfixOp{ <> }),
-  #[precedence(level="5")]
+  #[precedence(level="3")] #[assoc(side="left")] // 3: 乗算除算
+  <left:Expr> <operator:ProductOp> <right:Expr> => Box::new(Expr::InfixOp{ left, operator, right }),
+  #[precedence(level="4")] #[assoc(side="left")] // 4: 加算減算
+  <left:Expr> <operator:SumOp> <right:Expr> => Box::new(Expr::InfixOp{ left, operator, right }),
+  #[precedence(level="5")] #[assoc(side="left")] // 5: 比較演算子
+  <left:Expr> <operator:LessGreaterOp> <right:Expr> => Box::new(Expr::InfixOp{ left, operator, right }),
+  #[precedence(level="6")] #[assoc(side="left")] // 6: 等価演算子
+  <left:Expr> <operator:EqualsOp> <right:Expr> => Box::new(Expr::InfixOp{ left, operator, right }),
+  #[precedence(level="7")]
   IfExpr,
   FuncLit,
+  ArrayLit,
 };
 
 IdentExpr: Box<Expr> = {
     Identifier => Box::new(Expr::Identifier(<>)),
 }
+
+IndexExpr: Box<Expr> = {
+    <left:IdentExpr> "[" <index:Expr> "]" => Box::new(Expr::Index{ left: left, index: index }),
+    <left:ArrayLit> "[" <index:Expr> "]" => Box::new(Expr::Index{ left: left, index: index }),
+};
 
 IfExpr: Box<Expr> = {
     "if" "(" <condition:Expr> ")" <consequence:BlockStmt> "else" <alternative:BlockStmt>
@@ -76,6 +85,10 @@ Params: Vec<Box<Expr>> = Comma<Expr>;
 CallExpr: Box<Expr> = {
     <function:IdentExpr> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
     <function: FuncLit> "(" <arguments:Arguments> ")" => Box::new(Expr::Call{ function: function, arguments: arguments }),
+};
+
+ArrayLit: Box<Expr> = {
+    "[" <elements:Arguments> "]" => Box::new(Expr::ArrayLit{ elements: elements }),
 };
 
 Arguments: Vec<Box<Expr>> = Comma<Expr>;

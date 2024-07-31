@@ -254,6 +254,48 @@ mod tests {
     }
 
     #[test]
+    fn test_array_expr() {
+        let expr = grammar::ExprParser::new().parse("[]").unwrap();
+        assert_eq!(format!("{:?}", expr), "[]");
+
+        let expr = grammar::ExprParser::new().parse("[1]").unwrap();
+        assert_eq!(format!("{:?}", expr), "[1]");
+
+        let expr = grammar::ExprParser::new().parse("[1, 2]").unwrap();
+        assert_eq!(format!("{:?}", expr), "[1, 2]");
+
+        let expr = grammar::ExprParser::new().parse("[1, 2, 3]").unwrap();
+        assert_eq!(format!("{:?}", expr), "[1, 2, 3]");
+
+        let expr = grammar::ExprParser::new().parse("[1 + 2, 3 * 4]").unwrap();
+        assert_eq!(format!("{:?}", expr), "[(1 + 2), (3 * 4)]");
+    }
+
+    #[test]
+    fn test_index_expr() {
+        let expr = grammar::ExprParser::new().parse("a[1]").unwrap();
+        assert_eq!(format!("{:?}", expr), "(a[1])");
+
+        let expr = grammar::ExprParser::new().parse("a[1] + b[2]").unwrap();
+        assert_eq!(format!("{:?}", expr), "((a[1]) + (b[2]))");
+
+        let expr = grammar::ExprParser::new().parse("a[(1 + 2)]").unwrap();
+        assert_eq!(format!("{:?}", expr), "(a[(1 + 2)])");
+
+        let expr = grammar::ExprParser::new().parse("a[1 + 2]").unwrap();
+        assert_eq!(format!("{:?}", expr), "(a[(1 + 2)])");
+
+        let expr = grammar::ExprParser::new().parse("a[1] + b[2 * 3]").unwrap();
+        assert_eq!(format!("{:?}", expr), "((a[1]) + (b[(2 * 3)]))");
+
+        let expr = grammar::ExprParser::new().parse("a[1 + 2] + b[3 * 4]").unwrap();
+        assert_eq!(format!("{:?}", expr), "((a[(1 + 2)]) + (b[(3 * 4)]))");
+
+        let expr = grammar::ExprParser::new().parse("[0,2][0]").unwrap();
+        assert_eq!(format!("{:?}", expr), "([0, 2][0])");
+    }
+
+    #[test]
     fn test_let_stmt() {
         let stmt = grammar::StmtParser::new().parse("let a = 1;").unwrap();
         assert_eq!(format!("{:?}", stmt), "let a = 1");

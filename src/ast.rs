@@ -46,8 +46,14 @@ pub enum Expr {
         function: Box<Expr>,
         arguments: Vec<Box<Expr>>,
     },
+    ArrayLit {
+        elements: Vec<Box<Expr>>,
+    },
+    Index {
+        left: Box<Expr>,
+        index: Box<Expr>,
+    },
     // TODO:
-    // Array Literal
     // Array Index Expression
     // Hash literal
     // Hash Index Expression
@@ -148,6 +154,22 @@ impl Debug for Expr {
                 s.push_str(")");
                 write!(fmt, "{}", s)
             }
+            ArrayLit { ref elements } => {
+                let mut s = String::new();
+                s.push_str("[");
+                for (i, e) in elements.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(&format!("{:?}", e));
+                }
+                s.push_str("]");
+                write!(fmt, "{}", s)
+            }
+            Index {
+                ref left,
+                ref index,
+            } => write!(fmt, "({:?}[{:?}])", left, index),
         }
     }
 }

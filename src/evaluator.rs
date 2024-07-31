@@ -154,6 +154,13 @@ impl Node for Expr {
                 }
                 apply_function(function, args.as_slice())
             }
+            Expr::ArrayLit { ref elements } => {
+                box_it!(Null)
+            }
+            Expr::Index {
+                ref left,
+                ref index,
+            } => { box_it!(Null) }
         }
     }
 }
