@@ -88,6 +88,7 @@ impl Node for Expr {
             Expr::StringLit(s) => box_it!(StringObj {
                 // NOTE: Trim the double quotes from the Expr::StringLit. This is because it
                 // contains the double quotes in the AST node value.
+                // TODO: This should be done in the parser.
                 value: s.trim_matches('"').to_string()
             }),
             Expr::InfixOp {
