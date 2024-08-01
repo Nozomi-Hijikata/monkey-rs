@@ -38,7 +38,7 @@ const ERROR_OBJ: &str = "ERROR";
 const FUNCTION_OBJ: &str = "FUNCTION";
 const STRING_OBJ: &str = "STRING";
 const BUILTIN_OBJ: &str = "BUILTIN";
-// const ARRAY_OBJ: &str = "ARRAY";
+const ARRAY_OBJ: &str = "ARRAY";
 // const HASH_OBJ: &str = "HASH";
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -51,7 +51,7 @@ pub enum ObjectType {
     Function,
     StringObj,
     Builtin,
-    // Array,
+    Array,
     // Hash,
 }
 
@@ -67,7 +67,7 @@ impl ObjectType {
             ObjectType::Function => FUNCTION_OBJ,
             ObjectType::StringObj => STRING_OBJ,
             ObjectType::Builtin => BUILTIN_OBJ,
-            // ObjectType::Array => ARRAY_OBJ,
+            ObjectType::Array => ARRAY_OBJ,
             // ObjectType::Hash => HASH_OBJ,
         }
     }
@@ -218,5 +218,27 @@ impl Object for Builtin {
 
     fn inspect(&self) -> String {
         "builtin function".to_string()
+    }
+}
+
+#[derive(Clone)]
+pub struct Array {
+    pub elements: Vec<ObjectRef>,
+}
+
+impl Object for Array {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Array
+    }
+
+    fn inspect(&self) -> String {
+        let mut elements = Vec::new();
+        for e in &self.elements {
+            elements.push(e.inspect());
+        }
+        format!("[{}]", elements.join(", "))
     }
 }

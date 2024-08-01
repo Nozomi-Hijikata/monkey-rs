@@ -288,7 +288,9 @@ mod tests {
         let expr = grammar::ExprParser::new().parse("a[1] + b[2 * 3]").unwrap();
         assert_eq!(format!("{:?}", expr), "((a[1]) + (b[(2 * 3)]))");
 
-        let expr = grammar::ExprParser::new().parse("a[1 + 2] + b[3 * 4]").unwrap();
+        let expr = grammar::ExprParser::new()
+            .parse("a[1 + 2] + b[3 * 4]")
+            .unwrap();
         assert_eq!(format!("{:?}", expr), "((a[(1 + 2)]) + (b[(3 * 4)]))");
 
         let expr = grammar::ExprParser::new().parse("[0,2][0]").unwrap();

@@ -2,7 +2,7 @@ use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::builtin::get_builtin;
 use crate::environment::Environment;
 use crate::object::{
-    Boolean, Builtin, Error, Function, Integer, Null, ObjectRef, ReturnValue, StringObj,
+    Array, Boolean, Builtin, Error, Function, Integer, Null, ObjectRef, ReturnValue, StringObj,
 };
 use crate::{box_it, downcast_ref};
 use std::fmt;
@@ -156,12 +156,27 @@ impl Node for Expr {
                 apply_function(function, args.as_slice())
             }
             Expr::ArrayLit { ref elements } => {
-                box_it!(Null)
+                let elements = eval_expressions(elements, env);
+                if elements.len() == 1 && is_error(&elements[0]) {
+                    return elements[0].clone();
+                }
+                box_it!(Array { elements })
             }
             Expr::Index {
                 ref left,
                 ref index,
-            } => { box_it!(Null) }
+            } => {
+                let left = eval(left.as_ref(), env);
+                if is_error(&left) {
+                    return left;
+                }
+
+                let index = eval(index.as_ref(), env);
+                if is_error(&index) {
+                    return index;
+                }
+                eval_index_expression(&left, &index)
+            }
         }
     }
 }
@@ -372,6 +387,25 @@ fn apply_function(function: ObjectRef, args: &[ObjectRef]) -> ObjectRef {
         "not a function: {:?}",
         function.object_type().as_str()
     ))
+}
+
+fn eval_index_expression(left: &ObjectRef, index: &ObjectRef) -> ObjectRef {
+    if let (Some(array), Some(integer)) =
+        (downcast_ref!(left, Array), downcast_ref!(index, Integer))
+    {
+        let idx = integer.value as usize;
+        let max = array.elements.len() - 1;
+        if idx >= array.elements.len() || idx > max {
+            return box_it!(Null);
+        }
+        array.elements[idx].clone()
+    } else {
+        new_error(format_args!(
+            "index operator not supported: {}[{}]",
+            left.object_type().as_str(),
+            index.object_type().as_str()
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -662,6 +696,11 @@ mod tests {
             ("len(\"\");", 0),
             ("len(\"four\");", 4),
             ("len(\"hello world\");", 11),
+            ("len([1,2,3]);", 3),
+            ("len([]);", 0),
+            ("len([1, 2 * 2, 3 + 3]);", 3),
+            ("first([1, 2, 3]);", 1),
+            ("last([1, 2, 3]);", 3),
         ];
 
         for (input, expected) in tests {
@@ -682,12 +721,75 @@ mod tests {
     }
 
     #[test]
+    fn test_builtin_functions_with_slices() {
+        let tests: Vec<(&str, &[i64])> = vec![
+            ("rest([1, 2, 3]);", &[2, 3]),
+            ("push([], 1);", &[1]),
+            ("push([1], 2);", &[1, 2]),
+            ("push([1, 2], 3);", &[1, 2, 3]),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
+            match results {
+                Ok(result) => {
+                    if let Some(array) = downcast_ref!(&result, Array) {
+                        for (i, element) in array.elements.iter().enumerate() {
+                            if let Some(integer) = downcast_ref!(element, Integer) {
+                                assert_eq!(integer.value, expected[i]);
+                            } else {
+                                panic!("Expected Integer object");
+                            }
+                        }
+                    } else {
+                        panic!("Expected Array object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_builtin_functions_with_null() {
+        let tests = vec![("first([]);", "null"), ("last([]);", "null")];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
+            match results {
+                Ok(result) => {
+                    if let Some(null) = downcast_ref!(&result, Null) {
+                        assert_eq!(null.inspect(), expected);
+                    } else {
+                        panic!("Expected Null object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
+        }
+    }
+
+    #[test]
     fn test_builtin_functions_with_errors() {
         let tests = vec![
             ("len(1);", "argument to `len` not supported, got INTEGER"),
             (
                 "len(\"one\", \"two\");",
                 "wrong number of arguments. got=2, want=1",
+            ),
+            (
+                "first(1);",
+                "argument to `first` must be ARRAY, got INTEGER",
+            ),
+            ("last(1);", "argument to `last` must be ARRAY, got INTEGER"),
+            ("rest(1);", "argument to `rest` must be ARRAY, got INTEGER"),
+            (
+                "push(1, 1);",
+                "argument to `push` must be ARRAY, got INTEGER",
             ),
         ];
 
@@ -705,6 +807,62 @@ mod tests {
                 }
                 Err(e) => panic!("Error: {}", e),
             }
+        }
+    }
+
+    #[test]
+    fn test_array_literals() {
+        let input = "[1, 2 * 2, 3 + 3];";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(array) = downcast_ref!(&results, Array) {
+            assert_eq!(array.elements.len(), 3);
+            assert_is_integer(&array.elements[0], 1);
+            assert_is_integer(&array.elements[1], 4);
+            assert_is_integer(&array.elements[2], 6);
+        } else {
+            panic!("Expected Array object");
+        }
+    }
+
+    #[test]
+    fn test_array_index_expressions() {
+        let tests = vec![
+            ("[1, 2, 3][0];", 1),
+            ("[1, 2, 3][1];", 2),
+            ("[1, 2, 3][2];", 3),
+            ("let i = 0; [1][i];", 1),
+            ("[1, 2, 3][1 + 1];", 3),
+            ("let myArray = [1, 2, 3]; myArray[2];", 3),
+            (
+                "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+                6,
+            ),
+            (
+                "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i];",
+                2,
+            ),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
+            assert_is_integer(&results, expected);
+        }
+    }
+
+    #[test]
+    fn test_array_index_null_object() {
+        let input = "[1, 2, 3][3];";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(null) = downcast_ref!(&results, Null) {
+            assert_eq!(null.inspect(), "null");
+        } else {
+            panic!("Expected Null object");
         }
     }
 }
