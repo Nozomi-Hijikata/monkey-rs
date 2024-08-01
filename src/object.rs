@@ -199,7 +199,7 @@ impl Object for StringObj {
     }
 
     fn inspect(&self) -> String {
-        self.value.clone()
+        format!("\"{}\"", self.value)
     }
 }
 

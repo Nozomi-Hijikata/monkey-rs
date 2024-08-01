@@ -671,7 +671,7 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         if let Some(string) = downcast_ref!(&results, StringObj) {
-            assert_eq!(string.inspect(), "Hello, World!");
+            assert_eq!(string.inspect(), "\"Hello, World!\"");
         } else {
             panic!("Expected String object");
         }
@@ -684,7 +684,7 @@ mod tests {
         let mut env = Environment::new();
         let results = eval_program(&program, &mut env).unwrap();
         if let Some(string) = downcast_ref!(&results, StringObj) {
-            assert_eq!(string.inspect(), "Hello World!");
+            assert_eq!(string.inspect(), "\"Hello World!\"");
         } else {
             panic!("Expected String object");
         }
