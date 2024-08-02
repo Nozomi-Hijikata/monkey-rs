@@ -177,6 +177,9 @@ impl Node for Expr {
                 }
                 eval_index_expression(&left, &index)
             }
+            Expr::HashLit { ref pairs } => {
+                box_it!(Null)
+            }
         }
     }
 }

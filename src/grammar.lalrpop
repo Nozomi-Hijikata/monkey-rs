@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use crate::ast::{Stmt, Expr, Opcode, Program};
+use std::collections::HashMap;
 
 grammar;
 
@@ -29,13 +30,23 @@ ReturnStmt: Box<Stmt> = {
     "return" <return_value:Expr> ";" => Box::new(Stmt::Return{ <> }),
 };
 
+// TODO: Make semicolon optional
 ExprStmt: Box<Stmt> = {
     <expression:Expr> ";" => Box::new(Stmt::Expr{ <> }),
 };
 
+// NOTE: Block statement does not allow empty Block to avoid the ambuigity with HashLit
 BlockStmt: Box<Stmt> = {
-    "{" <statements:Stmts> "}" => Box::new(Stmt::Block { <> }),
-}
+    "{" <statements:NonEmptyStmts> "}" => Box::new(Stmt::Block { <> }),
+};
+
+NonEmptyStmts: Vec<Box<Stmt>> = {
+    <first:Stmt> <rest:Stmts> => {
+        let mut stmts = vec![first];
+        stmts.extend(rest);
+        stmts
+    }
+};
 
 // non-terminals(Expression)
 pub Expr: Box<Expr> = {
@@ -45,19 +56,20 @@ pub Expr: Box<Expr> = {
   IndexExpr,
   #[precedence(level="2")]
   CallExpr,
-  // 同じ優先度の場合は左結合
-  #[precedence(level="3")] #[assoc(side="left")] // 3: 乗算除算
+  #[precedence(level="3")] #[assoc(side="left")]
   <left:Expr> <operator:ProductOp> <right:Expr> => Box::new(Expr::InfixOp{<>}),
-  #[precedence(level="4")] #[assoc(side="left")] // 4: 加算減算
+  #[precedence(level="4")] #[assoc(side="left")]
   <left:Expr> <operator:SumOp> <right:Expr> => Box::new(Expr::InfixOp{<>}),
-  #[precedence(level="5")] #[assoc(side="left")] // 5: 比較演算子
+  #[precedence(level="5")] #[assoc(side="left")]
   <left:Expr> <operator:LessGreaterOp> <right:Expr> => Box::new(Expr::InfixOp{<>}),
-  #[precedence(level="6")] #[assoc(side="left")] // 6: 等価演算子
+  #[precedence(level="6")] #[assoc(side="left")]
   <left:Expr> <operator:EqualsOp> <right:Expr> => Box::new(Expr::InfixOp{<>}),
   #[precedence(level="7")]
   IfExpr,
   FuncLit,
   ArrayLit,
+  #[precedence(level="8")]
+  HashLit,
 };
 
 IdentExpr: Box<Expr> = {
@@ -92,6 +104,14 @@ ArrayLit: Box<Expr> = {
 };
 
 Arguments: Vec<Box<Expr>> = Comma<Expr>;
+
+HashLit: Box<Expr> = {
+    "{" <pairs:Comma<HashPair>> "}" => Box::new(Expr::HashLit{<>}),
+};
+
+HashPair: (Box<Expr>, Box<Expr>) = {
+  <key: Expr> ":" <value: Expr> => (key, value)
+};
 
 TermExpr: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)),
@@ -171,3 +191,4 @@ Comma<T>: Vec<T> = {
         }
     }
 };
+

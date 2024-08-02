@@ -298,6 +298,42 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_literal_expr() {
+        let expr = grammar::ExprParser::new().parse("{}").unwrap();
+        assert_eq!(format!("{:?}", expr), "{}");
+
+        let expr = grammar::ExprParser::new().parse("{1: 2}").unwrap();
+        assert_eq!(format!("{:?}", expr), "{1: 2, }");
+
+        let expr = grammar::ExprParser::new().parse("{1: 2, 3: 4}").unwrap();
+        assert_eq!(format!("{:?}", expr), "{1: 2, 3: 4, }");
+
+        let expr = grammar::ExprParser::new().parse("{1 + 2: 3 * 4}").unwrap();
+        assert_eq!(format!("{:?}", expr), "{(1 + 2): (3 * 4), }");
+
+        let expr = grammar::ExprParser::new()
+            .parse("{1: 2, 3: 4, 5: 6}")
+            .unwrap();
+        assert_eq!(format!("{:?}", expr), "{1: 2, 3: 4, 5: 6, }");
+
+        let expr = grammar::ExprParser::new()
+            .parse("{\"one\": 1, \"two\": 2, \"three\": 3}")
+            .unwrap();
+        assert_eq!(
+            format!("{:?}", expr),
+            "{\"one\": 1, \"two\": 2, \"three\": 3, }"
+        );
+
+        let expr = grammar::ExprParser::new()
+            .parse("{\"one\": 1 + 2, \"two\": 3 * 4, \"three\": 5 - 6}")
+            .unwrap();
+        assert_eq!(
+            format!("{:?}", expr),
+            "{\"one\": (1 + 2), \"two\": (3 * 4), \"three\": (5 - 6), }"
+        );
+    }
+
+    #[test]
     fn test_let_stmt() {
         let stmt = grammar::StmtParser::new().parse("let a = 1;").unwrap();
         assert_eq!(format!("{:?}", stmt), "let a = 1");
@@ -426,6 +462,9 @@ mod tests {
 
         let stmt = grammar::StmtParser::new().parse("{ 1+2; 2*3; }").unwrap();
         assert_eq!(format!("{:?}", stmt), "{\n  (1 + 2)\n  (2 * 3)\n}");
+
+        let stmt = grammar::StmtParser::new().parse("{ 1; 2; 3; }").unwrap();
+        assert_eq!(format!("{:?}", stmt), "{\n  1\n  2\n  3\n}");
     }
 
     #[test]

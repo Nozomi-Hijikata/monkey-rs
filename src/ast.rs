@@ -53,10 +53,10 @@ pub enum Expr {
         left: Box<Expr>,
         index: Box<Expr>,
     },
-    // TODO:
-    // Array Index Expression
-    // Hash literal
-    // Hash Index Expression
+    HashLit {
+        pairs: Vec<(Box<Expr>, Box<Expr>)>,
+    }, // TODO:
+       // Hash Index Expression
 }
 
 #[derive(Copy, Clone)]
@@ -170,6 +170,15 @@ impl Debug for Expr {
                 ref left,
                 ref index,
             } => write!(fmt, "({:?}[{:?}])", left, index),
+            HashLit { ref pairs } => {
+                let mut s = String::new();
+                s.push_str("{");
+                for (k, v) in pairs.iter() {
+                    s.push_str(&format!("{:?}: {:?}, ", k, v));
+                }
+                s.push_str("}");
+                write!(fmt, "{}", s)
+            }
         }
     }
 }
