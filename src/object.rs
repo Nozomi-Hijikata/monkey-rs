@@ -1,6 +1,7 @@
 use crate::ast::Expr;
 use crate::{ast::Stmt, environment::Environment};
 use std::any::Any;
+use std::collections::HashMap;
 
 #[allow(dead_code)]
 pub trait Object: ObjectClone {
@@ -39,7 +40,7 @@ const FUNCTION_OBJ: &str = "FUNCTION";
 const STRING_OBJ: &str = "STRING";
 const BUILTIN_OBJ: &str = "BUILTIN";
 const ARRAY_OBJ: &str = "ARRAY";
-// const HASH_OBJ: &str = "HASH";
+const HASH_OBJ: &str = "HASH";
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum ObjectType {
@@ -52,7 +53,7 @@ pub enum ObjectType {
     StringObj,
     Builtin,
     Array,
-    // Hash,
+    Hash,
 }
 
 #[allow(dead_code)]
@@ -68,7 +69,7 @@ impl ObjectType {
             ObjectType::StringObj => STRING_OBJ,
             ObjectType::Builtin => BUILTIN_OBJ,
             ObjectType::Array => ARRAY_OBJ,
-            // ObjectType::Hash => HASH_OBJ,
+            ObjectType::Hash => HASH_OBJ,
         }
     }
 }
@@ -240,5 +241,119 @@ impl Object for Array {
             elements.push(e.inspect());
         }
         format!("[{}]", elements.join(", "))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct HashKey {
+    pub value: u64,
+}
+
+#[derive(Clone)]
+pub struct HashPair {
+    pub key: ObjectRef,
+    pub value: ObjectRef,
+}
+
+#[allow(dead_code)]
+pub trait Hashable {
+    fn hash_key(&self) -> HashKey;
+}
+
+#[derive(Clone)]
+pub struct Hash {
+    pub pairs: HashMap<HashKey, HashPair>,
+}
+
+impl Object for Hash {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn object_type(&self) -> ObjectType {
+        ObjectType::Hash
+    }
+
+    fn inspect(&self) -> String {
+        let mut pairs = Vec::new();
+        for (_, pair) in &self.pairs {
+            pairs.push(format!("{}: {}", pair.key.inspect(), pair.value.inspect()));
+        }
+        format!("{{{}}}", pairs.join(", "))
+    }
+}
+
+impl Hashable for Integer {
+    fn hash_key(&self) -> HashKey {
+        HashKey {
+            value: self.value as u64,
+        }
+    }
+}
+
+impl Hashable for Boolean {
+    fn hash_key(&self) -> HashKey {
+        let value = if self.value { 1 } else { 0 };
+        HashKey { value }
+    }
+}
+
+impl Hashable for StringObj {
+    fn hash_key(&self) -> HashKey {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        self.value.hash(&mut hasher);
+        HashKey {
+            value: hasher.finish(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_hash_key() {
+        let hello1 = StringObj {
+            value: "Hello World".to_string(),
+        };
+        let hello2 = StringObj {
+            value: "Hello World".to_string(),
+        };
+        let diff1 = StringObj {
+            value: "My name is johnny".to_string(),
+        };
+        let diff2 = StringObj {
+            value: "My name is johnny".to_string(),
+        };
+
+        assert_eq!(hello1.hash_key(), hello2.hash_key());
+        assert_eq!(diff1.hash_key(), diff2.hash_key());
+        assert_ne!(hello1.hash_key(), diff1.hash_key());
+    }
+
+    #[test]
+    fn test_boolean_hash_key() {
+        let true1 = Boolean { value: true };
+        let true2 = Boolean { value: true };
+        let false1 = Boolean { value: false };
+        let false2 = Boolean { value: false };
+
+        assert_eq!(true1.hash_key(), true2.hash_key());
+        assert_eq!(false1.hash_key(), false2.hash_key());
+        assert_ne!(true1.hash_key(), false1.hash_key());
+    }
+
+    #[test]
+    fn test_integer_hash_key() {
+        let one1 = Integer { value: 1 };
+        let one2 = Integer { value: 1 };
+        let two1 = Integer { value: 2 };
+        let two2 = Integer { value: 2 };
+
+        assert_eq!(one1.hash_key(), one2.hash_key());
+        assert_eq!(two1.hash_key(), two2.hash_key());
+        assert_ne!(one1.hash_key(), two1.hash_key());
     }
 }

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use crate::ast::{Stmt, Expr, Opcode, Program};
-use std::collections::HashMap;
 
 grammar;
 
@@ -79,6 +78,7 @@ IdentExpr: Box<Expr> = {
 IndexExpr: Box<Expr> = {
     <left:IdentExpr> "[" <index:Expr> "]" => Box::new(Expr::Index{<>}),
     <left:ArrayLit> "[" <index:Expr> "]" => Box::new(Expr::Index{<>}),
+    <left:HashLit> "[" <index:Expr> "]" => Box::new(Expr::Index{<>}),
 };
 
 IfExpr: Box<Expr> = {

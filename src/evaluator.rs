@@ -2,7 +2,8 @@ use crate::ast::{Expr, Node, Opcode, Program, Stmt};
 use crate::builtin::get_builtin;
 use crate::environment::Environment;
 use crate::object::{
-    Array, Boolean, Builtin, Error, Function, Integer, Null, ObjectRef, ReturnValue, StringObj,
+    Array, Boolean, Builtin, Error, Function, Hash, HashPair, Hashable, Integer, Null, ObjectRef,
+    ReturnValue, StringObj,
 };
 use crate::{box_it, downcast_ref};
 use std::fmt;
@@ -177,9 +178,7 @@ impl Node for Expr {
                 }
                 eval_index_expression(&left, &index)
             }
-            Expr::HashLit { ref pairs } => {
-                box_it!(Null)
-            }
+            Expr::HashLit { ref pairs } => eval_hash_literal(pairs, env),
         }
     }
 }
@@ -402,12 +401,62 @@ fn eval_index_expression(left: &ObjectRef, index: &ObjectRef) -> ObjectRef {
             return box_it!(Null);
         }
         array.elements[idx].clone()
+    } else if let Some(hash) = downcast_ref!(left, Hash) {
+        eval_hash_index_expression(hash, index)
     } else {
         new_error(format_args!(
             "index operator not supported: {}[{}]",
             left.object_type().as_str(),
             index.object_type().as_str()
         ))
+    }
+}
+
+fn eval_hash_literal(pairs: &[(Box<Expr>, Box<Expr>)], env: &mut Environment) -> ObjectRef {
+    let mut hash = std::collections::HashMap::new();
+    for (key_expr, value_expr) in pairs {
+        let key = eval(key_expr.as_ref(), env);
+        if is_error(&key) {
+            return key;
+        }
+
+        let hash_key = if let Some(integer) = downcast_ref!(&key, Integer) {
+            integer.hash_key()
+        } else if let Some(boolean) = downcast_ref!(&key, Boolean) {
+            boolean.hash_key()
+        } else if let Some(string) = downcast_ref!(&key, StringObj) {
+            string.hash_key()
+        } else {
+            return new_error(format_args!("unusable as hash key: {:?}", key.inspect()));
+        };
+
+        let value = eval(value_expr.as_ref(), env);
+        if is_error(&value) {
+            return value;
+        }
+        let pair = HashPair { key, value };
+
+        hash.insert(hash_key, pair);
+    }
+
+    box_it!(Hash { pairs: hash })
+}
+
+fn eval_hash_index_expression(hash: &Hash, index: &ObjectRef) -> ObjectRef {
+    let key = if let Some(integer) = downcast_ref!(index, Integer) {
+        integer.hash_key()
+    } else if let Some(boolean) = downcast_ref!(index, Boolean) {
+        boolean.hash_key()
+    } else if let Some(string) = downcast_ref!(index, StringObj) {
+        string.hash_key()
+    } else {
+        return new_error(format_args!("unusable as hash key: {:?}", index.inspect()));
+    };
+
+    if let Some(pair) = hash.pairs.get(&key) {
+        pair.value.clone()
+    } else {
+        box_it!(Null)
     }
 }
 
@@ -866,6 +915,112 @@ mod tests {
             assert_eq!(null.inspect(), "null");
         } else {
             panic!("Expected Null object");
+        }
+    }
+
+    #[test]
+    fn test_eval_hash_literal_with_string() {
+        let input = "
+        let two = \"two\";
+        {
+            \"one\": 10 - 9,
+            two: 1 + 1,
+            \"thr\" + \"ee\": 6 / 2,
+        };
+        ";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(hash) = downcast_ref!(&results, Hash) {
+            let expected = vec![("one", 1), ("two", 2), ("three", 3)];
+            for (key, value) in expected {
+                let key_object = StringObj {
+                    value: key.to_string(),
+                };
+
+                let key_hash = key_object.hash_key();
+                let pair = hash.pairs.get(&key_hash).unwrap();
+                assert_is_integer(&pair.value, value);
+            }
+        } else {
+            panic!("Expected Hash object");
+        }
+    }
+
+    #[test]
+    fn test_eval_hash_literal_with_integer() {
+        let input = "{1: 1, 2: 2, 3: 3};";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(hash) = downcast_ref!(&results, Hash) {
+            let expected = vec![(1, 1), (2, 2), (3, 3)];
+            for (key, value) in expected {
+                let key_object = Integer { value: key };
+                let key_hash = key_object.hash_key();
+                let pair = hash.pairs.get(&key_hash).unwrap();
+                assert_is_integer(&pair.value, value);
+            }
+        } else {
+            panic!("Expected Hash object");
+        }
+    }
+
+    #[test]
+    fn test_eval_hash_literal_with_boolean() {
+        let input = "{true: 1, false: 0};";
+        let program = parse_program(input).unwrap();
+        let mut env = Environment::new();
+        let results = eval_program(&program, &mut env).unwrap();
+        if let Some(hash) = downcast_ref!(&results, Hash) {
+            let expected = vec![(true, 1), (false, 0)];
+            for (key, value) in expected {
+                let key_object = Boolean { value: key };
+                let key_hash = key_object.hash_key();
+                let pair = hash.pairs.get(&key_hash).unwrap();
+                assert_is_integer(&pair.value, value);
+            }
+        } else {
+            panic!("Expected Hash object");
+        }
+    }
+
+    #[test]
+    fn test_hash_index_expressions() {
+        let tests = vec![
+            ("{\"foo\": 5}[\"foo\"];", 5),
+            ("let key = \"foo\"; {\"foo\": 5}[key];", 5),
+            ("{5: 5}[5];", 5),
+            ("{true: 5}[true];", 5),
+            ("{false: 5}[false];", 5),
+        ];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env).unwrap();
+            assert_is_integer(&results, expected);
+        }
+    }
+
+    #[test]
+    fn test_hash_index_expressions_with_null() {
+        let tests = vec![("{\"foo\": 5}[\"bar\"];", "null"), ("{}[\"foo\"];", "null")];
+
+        for (input, expected) in tests {
+            let program = parse_program(input).unwrap();
+            let mut env = Environment::new();
+            let results = eval_program(&program, &mut env);
+            match results {
+                Ok(result) => {
+                    if let Some(null) = downcast_ref!(&result, Null) {
+                        assert_eq!(null.inspect(), expected);
+                    } else {
+                        panic!("Expected Null object");
+                    }
+                }
+                Err(e) => panic!("Error: {}", e),
+            }
         }
     }
 }
